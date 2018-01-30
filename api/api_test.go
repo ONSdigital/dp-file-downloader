@@ -49,6 +49,34 @@ func TestSuccessfulDownload(t *testing.T) {
 	})
 }
 
+func TestReturnsCorrectStatus(t *testing.T) {
+	t.Parallel()
+	Convey("Given an api with a mock implementation of Downloader", t, func() {
+
+		responseBody := "Mock invocation"
+		queryParam := "my-query-param"
+		mockDownloader := createMockDownloader("mock", []string{queryParam}, responseBody, http.StatusBadRequest, nil)
+
+		api := routes(mux.NewRouter(), mockDownloader)
+
+		Convey("When a route is invoked ", func() {
+
+			url := "http://localhost:80/download/" + mockDownloader.Type() + "?" + queryParam + "=foo"
+			r, err := http.NewRequest("GET", url, nil)
+			So(err, ShouldBeNil)
+
+			w := httptest.NewRecorder()
+			api.router.ServeHTTP(w, r)
+
+			Convey("The correct response should be returned", func() {
+				So(w.Result().StatusCode, ShouldEqual, http.StatusBadRequest)
+				So(w.Header().Get("Content-Type"), ShouldEqual, responseType)
+				So(w.Body.String(), ShouldEqual, responseBody)
+			})
+		})
+	})
+}
+
 func TestNotFound(t *testing.T) {
 	t.Parallel()
 	Convey("Given an api with a mock implementation of Downloader", t, func() {

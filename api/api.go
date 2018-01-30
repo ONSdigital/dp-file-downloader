@@ -104,15 +104,13 @@ func handleDownload(handler func(r *http.Request) (io.Reader, string, int, error
 			}
 			http.Error(w, err.Error(), status)
 		} else {
-			// write content type header
+			w.WriteHeader(status)
 			w.Header().Add("Content-Type", contentType)
 			// write body
 			_, err := io.Copy(w, reader)
 			if err != nil {
 				log.ErrorR(request, err, log.Data{"_message": "handleDownload: Error while copying from reader", "request:": request})
 				http.Error(w, err.Error(), http.StatusInternalServerError)
-			} else {
-				w.WriteHeader(http.StatusOK)
 			}
 		}
 	}

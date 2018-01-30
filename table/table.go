@@ -5,16 +5,32 @@ import (
 	"net/http"
 	"strings"
 
+	"fmt"
+
+	"github.com/ONSdigital/go-ns/log"
 	"github.com/ONSdigital/go-ns/rhttp"
-	"github.com/gorilla/mux"
+)
+
+var (
+	destTokenHeader = "X-Florence-Token"
+	srcTokenCookie  = "access_token"
+	formatParam     = "format"
+	uriParam        = "uri"
 )
 
 // Downloader implements api.Downloader.
 type Downloader struct {
-	contentClient  *rhttp.Client
+	contentClient  HTTPClient
 	contentHost    string
-	rendererClient *rhttp.Client
+	rendererClient HTTPClient
 	rendererHost   string
+}
+
+//go:generate moq -out testdata/mock_httpclient.go -pkg testdata . HTTPClient
+
+// HTTPClient is implemented by http.Client etc.
+type HTTPClient interface {
+	Do(req *http.Request) (*http.Response, error)
 }
 
 // NewDownloader returns a new Downloader using rhttp.DefaultClient
@@ -23,7 +39,7 @@ func NewDownloader(contentHost string, rendererHost string) Downloader {
 }
 
 // NewDownloaderWithClients returns a new Downloader using the given clients
-func NewDownloaderWithClients(contentClient *rhttp.Client, contentHost string, rendererClient *rhttp.Client, rendererHost string) Downloader {
+func NewDownloaderWithClients(contentClient HTTPClient, contentHost string, rendererClient HTTPClient, rendererHost string) Downloader {
 	return Downloader{
 		contentClient:  contentClient,
 		contentHost:    contentHost,
@@ -41,20 +57,62 @@ func (downloader *Downloader) Type() string {
 // 'format' is the format of the file to return - xlsx, csv or html.
 // 'uri' is the location of the file that defines the table (a path that resolves to a .json file in the content server).
 func (downloader *Downloader) QueryParameters() []string {
-	return []string{"format", "uri"}
+	return []string{formatParam, uriParam}
 }
 
-// Download fulfills the Request to download a table, sending the file in the ResponseWriter.
-func (downloader *Downloader) Download(r *http.Request) (io.Reader, string, int, error) {
+// Download fulfills the Request to download a table.
+func (downloader *Downloader) Download(r *http.Request) (responseBody io.Reader, contentType string, responseStatus int, responseErr error) {
 
-	vars := mux.Vars(r)
+	format := r.URL.Query().Get(formatParam)
+	uri := r.URL.Query().Get(uriParam)
 
-	format := vars["format"]
-	uri := vars["uri"]
-	println(format, uri)
+	// call the content server to get the json definition of the table
+	contentRequest, err := http.NewRequest("GET", downloader.contentHost+"/resource?uri="+uri, nil)
+	if err != nil {
+		log.ErrorR(r, err, log.Data{"_message": "Unable to create HttpRequest to call content server"})
+		return nil, "", http.StatusInternalServerError, err
+	}
+	copyHeaders(r, contentRequest)
+	contentRequest.Header.Set("Accept", "application/json")
+	contentResponse, err := downloader.contentClient.Do(contentRequest)
+	if err != nil {
+		log.ErrorR(r, err, log.Data{"_message": "Error calling content server", "uri": uri})
+		return nil, "", http.StatusInternalServerError, err
+	}
+	if contentResponse.StatusCode != 200 {
+		err = fmt.Errorf("Unexpected response from content server. Status=", contentResponse.StatusCode)
+		log.ErrorR(r, err, log.Data{"uri": uri})
+		return nil, contentResponse.Header.Get("Content-Type"), contentResponse.StatusCode, err
+	}
 
-	//renderRequest, err := http.NewRequest("GET", dl.rendererHost, nil)
-	//if (err)
+	// post the json definition to the renderer
+	renderRequest, err := http.NewRequest("POST", downloader.rendererHost+"/render/"+format, contentResponse.Body)
+	copyHeaders(r, renderRequest)
+	renderRequest.Header.Set("Content-Type", "application/json")
+	renderResponse, err := downloader.rendererClient.Do(renderRequest)
+	if err != nil {
+		log.ErrorR(r, err, log.Data{"_message": "Error calling render server", "format": format})
+		return nil, "", http.StatusInternalServerError, err
+	}
 
-	return strings.NewReader(""), "foo", http.StatusOK, nil
+	// return content from the renderResponse
+	return renderResponse.Body, renderResponse.Header.Get("Content-Type"), renderResponse.StatusCode, nil
+}
+
+func copyHeaders(source *http.Request, dest *http.Request) {
+	for name, headers := range source.Header {
+		name = strings.ToLower(name)
+		for _, value := range headers {
+			dest.Header.Add(name, value)
+		}
+	}
+	// if we have an access token cookie, copy it to a header for onward requests
+	if len(dest.Header.Get(destTokenHeader)) == 0 {
+		cookie, err := source.Cookie(srcTokenCookie)
+		if err != nil {
+			log.ErrorR(source, err, log.Data{"_message": "Unable to get cookie " + srcTokenCookie})
+		} else {
+			dest.Header.Add(destTokenHeader, cookie.Value)
+		}
+	}
 }

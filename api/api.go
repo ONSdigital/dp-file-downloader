@@ -104,8 +104,8 @@ func handleDownload(handler func(r *http.Request) (io.Reader, string, int, error
 			}
 			http.Error(w, err.Error(), status)
 		} else {
-			w.WriteHeader(status)
 			w.Header().Add("Content-Type", contentType)
+			w.WriteHeader(status)
 			// write body
 			_, err := io.Copy(w, reader)
 			if err != nil {

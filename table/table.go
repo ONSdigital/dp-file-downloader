@@ -80,13 +80,17 @@ func (downloader *Downloader) Download(r *http.Request) (responseBody io.Reader,
 		return nil, "", http.StatusInternalServerError, err
 	}
 	if contentResponse.StatusCode != 200 {
-		err = fmt.Errorf("Unexpected response from content server. Status=", contentResponse.StatusCode)
+		err = fmt.Errorf("Unexpected response from content server. Status=%d", contentResponse.StatusCode)
 		log.ErrorR(r, err, log.Data{"uri": uri})
 		return contentResponse.Body, contentResponse.Header.Get("Content-Type"), contentResponse.StatusCode, err
 	}
 
 	// post the json definition to the renderer
 	renderRequest, err := http.NewRequest("POST", downloader.rendererHost+"/render/"+format, contentResponse.Body)
+	if err != nil {
+		log.ErrorR(r, err, log.Data{"_message": "Unable to create HttpRequest to call render server"})
+		return nil, "", http.StatusInternalServerError, err
+	}
 	copyHeaders(r, renderRequest)
 	renderRequest.Header.Set("Content-Type", "application/json")
 	renderResponse, err := downloader.rendererClient.Do(renderRequest)
@@ -99,6 +103,7 @@ func (downloader *Downloader) Download(r *http.Request) (responseBody io.Reader,
 	return renderResponse.Body, renderResponse.Header.Get("Content-Type"), renderResponse.StatusCode, nil
 }
 
+// copyHeaders copies headers from the source request to the destination, and sets X-Florence-Token if there's an access_token cookie in the source.
 func copyHeaders(source *http.Request, dest *http.Request) {
 	for name, headers := range source.Header {
 		name = strings.ToLower(name)
@@ -107,12 +112,8 @@ func copyHeaders(source *http.Request, dest *http.Request) {
 		}
 	}
 	// if we have an access token cookie, copy it to a header for onward requests
-	if len(dest.Header.Get(destTokenHeader)) == 0 {
-		cookie, err := source.Cookie(srcTokenCookie)
-		if err != nil {
-			log.ErrorR(source, err, log.Data{"_message": "Unable to get cookie " + srcTokenCookie})
-		} else {
-			dest.Header.Add(destTokenHeader, cookie.Value)
-		}
+	cookie, err := source.Cookie(srcTokenCookie)
+	if err == nil { // we get an error if the cookie isn't present
+		dest.Header.Add(destTokenHeader, cookie.Value)
 	}
 }

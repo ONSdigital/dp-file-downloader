@@ -38,7 +38,7 @@ var (
 //     }
 type DownloaderMock struct {
 	// DownloadFunc mocks the Download method.
-	DownloadFunc func(r *http.Request) (io.Reader, string, int, error)
+	DownloadFunc func(r *http.Request) (io.ReadCloser, string, int, error)
 
 	// QueryParametersFunc mocks the QueryParameters method.
 	QueryParametersFunc func() []string
@@ -63,7 +63,7 @@ type DownloaderMock struct {
 }
 
 // Download calls DownloadFunc.
-func (mock *DownloaderMock) Download(r *http.Request) (io.Reader, string, int, error) {
+func (mock *DownloaderMock) Download(r *http.Request) (io.ReadCloser, string, int, error) {
 	if mock.DownloadFunc == nil {
 		panic("moq: DownloaderMock.DownloadFunc is nil but Downloader.Download was just called")
 	}

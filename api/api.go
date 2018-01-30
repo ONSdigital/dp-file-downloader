@@ -27,11 +27,11 @@ type DownloaderAPI struct {
 // Downloader defines the functions that are assigned to handle get requests
 type Downloader interface {
 	// Download retrieves/creates the file requested in the http.Request , returning:
-	// a reader with the contents of the file
+	// a reader with the contents of the file. This must be closed by the caller.
 	// the content-type of the response
 	// the http status code - should be 200 unless there was an error
 	// any error that occurred during processing
-	Download(r *http.Request) (io.Reader, string, int, error)
+	Download(r *http.Request) (io.ReadCloser, string, int, error)
 	// Type returns the (conceptual) type of file downloaded - forms part of the request path handled by this Downloader
 	Type() string
 	// QueryParameters returns the names of query parameters required by this Downloader
@@ -95,9 +95,15 @@ func Close(ctx context.Context) error {
 }
 
 // handleDownload accepts a Downloader.Download function and wraps it in a handler that writes the content to an http.ResponseWriter.
-func handleDownload(handler func(r *http.Request) (io.Reader, string, int, error)) func(http.ResponseWriter, *http.Request) {
+func handleDownload(handler func(r *http.Request) (io.ReadCloser, string, int, error)) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, request *http.Request) {
 		reader, contentType, status, err := handler(request)
+		defer func() {
+			err := reader.Close()
+			if err != nil {
+				log.ErrorR(request, err, log.Data{"_message": "Unable to close reader cleanly"})
+			}
+		}()
 		if err != nil {
 			if status < 400 {
 				status = http.StatusInternalServerError

@@ -62,7 +62,8 @@ func (downloader *Downloader) QueryParameters() []string {
 }
 
 // Download fulfills the Request to download a table.
-func (downloader *Downloader) Download(r *http.Request) (responseBody io.Reader, contentType string, responseStatus int, responseErr error) {
+// The responseBody must be closed by the caller.
+func (downloader *Downloader) Download(r *http.Request) (responseBody io.ReadCloser, contentType string, responseStatus int, responseErr error) {
 
 	format := r.URL.Query().Get(formatParam)
 	uri := r.URL.Query().Get(uriParam)
@@ -83,6 +84,12 @@ func (downloader *Downloader) Download(r *http.Request) (responseBody io.Reader,
 		log.ErrorR(r, err, log.Data{"uri": uri})
 		return contentResponse.Body, contentResponse.Header.Get("Content-Type"), contentResponse.StatusCode, nil
 	}
+	defer func() {
+		err := contentResponse.Body.Close()
+		if err != nil {
+			log.ErrorR(r, err, log.Data{"_message": "Unable to close the response from the content server cleanly"})
+		}
+	}()
 
 	// post the json definition to the renderer
 	renderRequest, err := http.NewRequest("POST", downloader.rendererHost+"/render/"+format, contentResponse.Body)

@@ -12,6 +12,7 @@ import (
 	"github.com/ONSdigital/dp-file-downloader/api/testdata"
 	"github.com/gorilla/mux"
 	. "github.com/smartystreets/goconvey/convey"
+	"io/ioutil"
 )
 
 const responseType = "text/plain"
@@ -178,8 +179,8 @@ func createMockDownloader(path string, query []string, responseBody string, code
 		TypeFunc: func() string {
 			return path
 		},
-		DownloadFunc: func(r *http.Request) (io.Reader, string, int, error) {
-			return strings.NewReader(responseBody), responseType, code, err
+		DownloadFunc: func(r *http.Request) (io.ReadCloser, string, int, error) {
+			return ioutil.NopCloser(strings.NewReader(responseBody)), responseType, code, err
 		},
 	}
 

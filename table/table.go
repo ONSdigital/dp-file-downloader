@@ -82,7 +82,7 @@ func (downloader *Downloader) Download(r *http.Request) (responseBody io.Reader,
 	if contentResponse.StatusCode != 200 {
 		err = fmt.Errorf("Unexpected response from content server. Status=", contentResponse.StatusCode)
 		log.ErrorR(r, err, log.Data{"uri": uri})
-		return nil, contentResponse.Header.Get("Content-Type"), contentResponse.StatusCode, err
+		return contentResponse.Body, contentResponse.Header.Get("Content-Type"), contentResponse.StatusCode, err
 	}
 
 	// post the json definition to the renderer

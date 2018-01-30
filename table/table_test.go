@@ -99,6 +99,36 @@ func TestMissingContent(t *testing.T) {
 		})
 	})
 }
+func TestContentServerSendsBadRequest(t *testing.T) {
+	t.Parallel()
+	Convey("Given a TableDownloader and a request the content server doesn't like", t, func() {
+
+		requestUri := "/foo/bar"
+		requestFormat := "html"
+		accessToken := "myAccessToken"
+
+		initialRequest, err := http.NewRequest("GET", "http://localhost/download/table?format="+requestFormat+"&uri="+requestUri, nil)
+		initialRequest.AddCookie(&http.Cookie{Name: "access_token", Value: accessToken})
+		So(err, ShouldBeNil)
+
+		expectedResponse := "Please log in"
+		contentClient := createMockClient(http.StatusBadRequest, expectedResponse, "")
+		renderClient := createMockClient(http.StatusOK, "", "")
+
+		testObj := table.NewDownloaderWithClients(contentClient, "http://"+contentHost, renderClient, "http://"+renderHost)
+
+		Convey("When Download is invoked ", func() {
+
+			responseBody, _, responseStatus, responseErr := testObj.Download(initialRequest)
+
+			Convey("A bad request should be returned", func() {
+				So(responseErr, ShouldNotBeNil)
+				So(responseStatus, ShouldEqual, http.StatusBadRequest)
+				So(readString(responseBody, t), ShouldEqual, expectedResponse)
+			})
+		})
+	})
+}
 
 func TestContentServerError(t *testing.T) {
 	t.Parallel()
@@ -171,6 +201,7 @@ func createMockClient(status int, response string, contentType string) *testdata
 }
 
 func readString(reader io.Reader, t *testing.T) string {
+	So(reader, ShouldNotBeNil)
 	bytes, e := ioutil.ReadAll(reader)
 	So(e, ShouldBeNil)
 	return string(bytes)

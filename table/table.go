@@ -12,10 +12,11 @@ import (
 )
 
 var (
-	destTokenHeader = "X-Florence-Token"
-	srcTokenCookie  = "access_token"
-	formatParam     = "format"
-	uriParam        = "uri"
+	tokenHeader      = "X-Florence-Token"
+	tokenCookie      = "access_token"
+	collectionCookie = "collection"
+	formatParam      = "format"
+	uriParam         = "uri"
 )
 
 // Downloader implements api.Downloader.
@@ -67,13 +68,11 @@ func (downloader *Downloader) Download(r *http.Request) (responseBody io.Reader,
 	uri := r.URL.Query().Get(uriParam)
 
 	// call the content server to get the json definition of the table
-	contentRequest, err := http.NewRequest("GET", downloader.contentHost+"/resource?uri="+uri, nil)
+	contentRequest, err := createContentRequest(downloader, uri, r)
 	if err != nil {
 		log.ErrorR(r, err, log.Data{"_message": "Unable to create HttpRequest to call content server"})
 		return nil, "", http.StatusInternalServerError, err
 	}
-	copyHeaders(r, contentRequest)
-	contentRequest.Header.Set("Accept", "application/json")
 	contentResponse, err := downloader.contentClient.Do(contentRequest)
 	if err != nil {
 		log.ErrorR(r, err, log.Data{"_message": "Error calling content server", "uri": uri})
@@ -82,7 +81,7 @@ func (downloader *Downloader) Download(r *http.Request) (responseBody io.Reader,
 	if contentResponse.StatusCode != 200 {
 		err = fmt.Errorf("Unexpected response from content server. Status=%d", contentResponse.StatusCode)
 		log.ErrorR(r, err, log.Data{"uri": uri})
-		return contentResponse.Body, contentResponse.Header.Get("Content-Type"), contentResponse.StatusCode, err
+		return contentResponse.Body, contentResponse.Header.Get("Content-Type"), contentResponse.StatusCode, nil
 	}
 
 	// post the json definition to the renderer
@@ -103,6 +102,23 @@ func (downloader *Downloader) Download(r *http.Request) (responseBody io.Reader,
 	return renderResponse.Body, renderResponse.Header.Get("Content-Type"), renderResponse.StatusCode, nil
 }
 
+// createContentRequest creates the request to send to the content server, extracting headers and cookies form the source request as appropriate
+func createContentRequest(downloader *Downloader, uri string, r *http.Request) (*http.Request, error) {
+	path := "/resource"
+	// append the requested collection, if one is present as a cookie
+	cookie, _ := r.Cookie(collectionCookie)
+	if cookie != nil {
+		path += "/" + cookie.Value
+	}
+	contentRequest, err := http.NewRequest("GET", downloader.contentHost+ path + "?uri="+uri, nil)
+	if err != nil {
+		return nil, err
+	}
+	copyHeaders(r, contentRequest)
+	contentRequest.Header.Set("Accept", "application/json")
+	return contentRequest, err
+}
+
 // copyHeaders copies headers from the source request to the destination, and sets X-Florence-Token if there's an access_token cookie in the source.
 func copyHeaders(source *http.Request, dest *http.Request) {
 	for name, headers := range source.Header {
@@ -112,8 +128,8 @@ func copyHeaders(source *http.Request, dest *http.Request) {
 		}
 	}
 	// if we have an access token cookie, copy it to a header for onward requests
-	cookie, err := source.Cookie(srcTokenCookie)
-	if err == nil { // we get an error if the cookie isn't present
-		dest.Header.Add(destTokenHeader, cookie.Value)
+	cookie, _ := source.Cookie(tokenCookie)
+	if cookie != nil {
+		dest.Header.Add(tokenHeader, cookie.Value)
 	}
 }

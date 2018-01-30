@@ -105,6 +105,7 @@ func handleDownload(handler func(r *http.Request) (io.ReadCloser, string, int, e
 			}
 		}()
 		if err != nil {
+			log.ErrorR(request, err, log.Data{"_message": "handleDownload: Error returned from handler", "request:": request})
 			if status < 400 {
 				status = http.StatusInternalServerError
 			}

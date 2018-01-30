@@ -49,6 +49,7 @@ func TestSuccessfulDownload(t *testing.T) {
 				So(request.Req.URL.Path, ShouldEqual, "/resource")
 				So(request.Req.URL.Query().Get("uri"), ShouldEqual, requestUri)
 				So(request.Req.Header.Get("X-Florence-Token"), ShouldEqual, accessToken)
+				So(request.Req.Header.Get("Accept-Encoding"), ShouldEqual, "application/json")
 				So(request.Req.Method, ShouldEqual, "GET")
 			})
 

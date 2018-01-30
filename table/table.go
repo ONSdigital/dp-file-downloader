@@ -115,7 +115,7 @@ func createContentRequest(downloader *Downloader, uri string, r *http.Request) (
 		return nil, err
 	}
 	copyHeaders(r, contentRequest)
-	contentRequest.Header.Set("Accept", "application/json")
+	contentRequest.Header.Set("Accept-Encoding", "application/json")
 	return contentRequest, err
 }
 

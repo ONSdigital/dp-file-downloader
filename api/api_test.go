@@ -9,13 +9,17 @@ import (
 	"net/http/httptest"
 	"strings"
 
+	"io/ioutil"
+
 	"github.com/ONSdigital/dp-file-downloader/api/testdata"
 	"github.com/gorilla/mux"
 	. "github.com/smartystreets/goconvey/convey"
-	"io/ioutil"
 )
 
-const responseType = "text/plain"
+var responseHeaders = map[string]string{
+	"Content-Type":        "text/plain",
+	"Content-Disposition": "attachment; filename=\"fname.ext\"",
+}
 
 func TestSuccessfulDownload(t *testing.T) {
 	t.Parallel()
@@ -43,7 +47,9 @@ func TestSuccessfulDownload(t *testing.T) {
 
 			Convey("The correct response should be returned", func() {
 				So(w.Code, ShouldEqual, http.StatusOK)
-				So(w.Header().Get("Content-Type"), ShouldEqual, responseType)
+				for key, expected := range responseHeaders {
+					So(w.Header().Get(key), ShouldEqual, expected)
+				}
 				So(w.Body.String(), ShouldEqual, responseBody)
 			})
 		})
@@ -71,7 +77,9 @@ func TestReturnsCorrectStatus(t *testing.T) {
 
 			Convey("The correct response should be returned", func() {
 				So(w.Result().StatusCode, ShouldEqual, http.StatusBadRequest)
-				So(w.Header().Get("Content-Type"), ShouldEqual, responseType)
+				for key, expected := range responseHeaders {
+					So(w.Header().Get(key), ShouldEqual, expected)
+				}
 				So(w.Body.String(), ShouldEqual, responseBody)
 			})
 		})
@@ -179,8 +187,8 @@ func createMockDownloader(path string, query []string, responseBody string, code
 		TypeFunc: func() string {
 			return path
 		},
-		DownloadFunc: func(r *http.Request) (io.ReadCloser, string, int, error) {
-			return ioutil.NopCloser(strings.NewReader(responseBody)), responseType, code, err
+		DownloadFunc: func(r *http.Request) (io.ReadCloser, map[string]string, int, error) {
+			return ioutil.NopCloser(strings.NewReader(responseBody)), responseHeaders, code, err
 		},
 	}
 

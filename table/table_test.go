@@ -22,8 +22,9 @@ func TestSuccessfulDownload(t *testing.T) {
 	t.Parallel()
 	Convey("Given a TableDownloader and a request to download a table", t, func() {
 
-		requestUri := "/foo/bar"
+		requestUri := "/foo/bar.json"
 		requestFormat := "html"
+		expectedDisposition := "attachment; filename=\"bar.html\""
 		accessToken := "myAccessToken"
 		expectedContentType := "text/html"
 		expectedContent := "renderServerResponse"
@@ -40,7 +41,7 @@ func TestSuccessfulDownload(t *testing.T) {
 
 		Convey("When Download is invoked ", func() {
 
-			responseBody, contentType, responseStatus, responseErr := testObj.Download(initialRequest)
+			responseBody, responseHeaders, responseStatus, responseErr := testObj.Download(initialRequest)
 
 			Convey("contentClient should be invoked correctly", func() {
 				So(len(contentClient.DoCalls()), ShouldEqual, 1)
@@ -65,7 +66,8 @@ func TestSuccessfulDownload(t *testing.T) {
 			Convey("The correct response should be returned", func() {
 				So(responseErr, ShouldBeNil)
 				So(responseStatus, ShouldEqual, http.StatusOK)
-				So(contentType, ShouldEqual, expectedContentType)
+				So(responseHeaders["Content-Type"], ShouldEqual, expectedContentType)
+				So(responseHeaders["Content-Disposition"], ShouldEqual, expectedDisposition)
 				So(readString(responseBody, t), ShouldEqual, expectedContent)
 			})
 		})
@@ -76,8 +78,9 @@ func TestSuccessfulDownloadForSpecificCollection(t *testing.T) {
 	t.Parallel()
 	Convey("Given a TableDownloader and a request to download a table, with a cookie identifying a collection", t, func() {
 
-		requestUri := "/foo/bar"
+		requestUri := "/foo/bar.json"
 		requestFormat := "html"
+		expectedDisposition := "attachment; filename=\"bar.html\""
 		accessToken := "myAccessToken"
 		contentCollection := "myCollection"
 		expectedContentType := "text/html"
@@ -96,13 +99,13 @@ func TestSuccessfulDownloadForSpecificCollection(t *testing.T) {
 
 		Convey("When Download is invoked ", func() {
 
-			responseBody, contentType, responseStatus, responseErr := testObj.Download(initialRequest)
+			responseBody, responseHeaders, responseStatus, responseErr := testObj.Download(initialRequest)
 
 			Convey("contentClient should be invoked correctly", func() {
 				So(len(contentClient.DoCalls()), ShouldEqual, 1)
 				request := contentClient.DoCalls()[0]
 				So(request.Req.URL.Host, ShouldEqual, contentHost)
-				So(request.Req.URL.Path, ShouldEqual, "/resource/" + contentCollection)
+				So(request.Req.URL.Path, ShouldEqual, "/resource/"+contentCollection)
 				So(request.Req.URL.Query().Get("uri"), ShouldEqual, requestUri)
 				So(request.Req.Header.Get("X-Florence-Token"), ShouldEqual, accessToken)
 				So(request.Req.Method, ShouldEqual, "GET")
@@ -120,7 +123,8 @@ func TestSuccessfulDownloadForSpecificCollection(t *testing.T) {
 			Convey("The correct response should be returned", func() {
 				So(responseErr, ShouldBeNil)
 				So(responseStatus, ShouldEqual, http.StatusOK)
-				So(contentType, ShouldEqual, expectedContentType)
+				So(responseHeaders["Content-Type"], ShouldEqual, expectedContentType)
+				So(responseHeaders["Content-Disposition"], ShouldEqual, expectedDisposition)
 				So(readString(responseBody, t), ShouldEqual, expectedContent)
 			})
 		})

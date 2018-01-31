@@ -27,11 +27,11 @@ type DownloaderAPI struct {
 // Downloader defines the functions that are assigned to handle get requests
 type Downloader interface {
 	// Download retrieves/creates the file requested in the http.Request , returning:
-	// a reader with the contents of the file. This must be closed by the caller.
-	// the content-type of the response
-	// the http status code - should be 200 unless there was an error
-	// any error that occurred during processing
-	Download(r *http.Request) (io.ReadCloser, string, int, error)
+	// body - a reader with the contents of the file. This must be closed by the caller.
+	// headers - should include Content-Type and Content-Disposition
+	// status - the http status code - should be 200 unless there was an error
+	// err - any error that occurred during processing
+	Download(r *http.Request) (body io.ReadCloser, headers map[string]string, status int, err error)
 	// Type returns the (conceptual) type of file downloaded - forms part of the request path handled by this Downloader
 	Type() string
 	// QueryParameters returns the names of query parameters required by this Downloader
@@ -80,7 +80,7 @@ func routes(router *mux.Router, downloaders ...Downloader) *DownloaderAPI {
 		}
 		path := "/download/" + d.Type()
 		api.router.Path(path).Methods("GET").Queries(queries...).HandlerFunc(handleDownload(d.Download))
-		log.Debug("Handling GET method on path " + path, log.Data{"query_parameters": d.QueryParameters()})
+		log.Debug("Handling GET method on path "+path, log.Data{"query_parameters": d.QueryParameters()})
 	}
 
 	return &api
@@ -97,9 +97,9 @@ func Close(ctx context.Context) error {
 }
 
 // handleDownload accepts a Downloader.Download function and wraps it in a handler that writes the content to an http.ResponseWriter.
-func handleDownload(handler func(r *http.Request) (io.ReadCloser, string, int, error)) func(http.ResponseWriter, *http.Request) {
+func handleDownload(handler func(r *http.Request) (io.ReadCloser, map[string]string, int, error)) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, request *http.Request) {
-		reader, contentType, status, err := handler(request)
+		reader, headers, status, err := handler(request)
 		defer func() {
 			err := reader.Close()
 			if err != nil {
@@ -113,7 +113,9 @@ func handleDownload(handler func(r *http.Request) (io.ReadCloser, string, int, e
 			}
 			http.Error(w, err.Error(), status)
 		} else {
-			w.Header().Add("Content-Type", contentType)
+			for key, value := range headers {
+				w.Header().Add(key, value)
+			}
 			w.WriteHeader(status)
 			// write body
 			_, err := io.Copy(w, reader)

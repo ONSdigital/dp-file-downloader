@@ -63,7 +63,7 @@ func (downloader *Downloader) QueryParameters() []string {
 
 // Download fulfills the Request to download a table.
 // The responseBody must be closed by the caller.
-func (downloader *Downloader) Download(r *http.Request) (responseBody io.ReadCloser, contentType string, responseStatus int, responseErr error) {
+func (downloader *Downloader) Download(r *http.Request) (responseBody io.ReadCloser, headers map[string]string, responseStatus int, responseErr error) {
 
 	format := r.URL.Query().Get(formatParam)
 	uri := r.URL.Query().Get(uriParam)
@@ -72,17 +72,17 @@ func (downloader *Downloader) Download(r *http.Request) (responseBody io.ReadClo
 	contentRequest, err := createContentRequest(downloader, uri, r)
 	if err != nil {
 		log.ErrorR(r, err, log.Data{"_message": "Unable to create HttpRequest to call content server"})
-		return nil, "", http.StatusInternalServerError, err
+		return nil, nil, http.StatusInternalServerError, err
 	}
 	contentResponse, err := downloader.contentClient.Do(contentRequest)
 	if err != nil {
 		log.ErrorR(r, err, log.Data{"_message": "Error calling content server", "uri": uri})
-		return nil, "", http.StatusInternalServerError, err
+		return nil, nil, http.StatusInternalServerError, err
 	}
 	if contentResponse.StatusCode != 200 {
 		err = fmt.Errorf("Unexpected response from content server. Status=%d", contentResponse.StatusCode)
 		log.ErrorR(r, err, log.Data{"uri": uri})
-		return contentResponse.Body, contentResponse.Header.Get("Content-Type"), contentResponse.StatusCode, nil
+		return contentResponse.Body, getContentType(contentResponse), contentResponse.StatusCode, nil
 	}
 	defer func() {
 		err := contentResponse.Body.Close()
@@ -95,18 +95,18 @@ func (downloader *Downloader) Download(r *http.Request) (responseBody io.ReadClo
 	renderRequest, err := http.NewRequest("POST", downloader.rendererHost+"/render/"+format, contentResponse.Body)
 	if err != nil {
 		log.ErrorR(r, err, log.Data{"_message": "Unable to create HttpRequest to call render server"})
-		return nil, "", http.StatusInternalServerError, err
+		return nil, nil, http.StatusInternalServerError, err
 	}
 	copyHeaders(r, renderRequest)
 	renderRequest.Header.Set("Content-Type", "application/json")
 	renderResponse, err := downloader.rendererClient.Do(renderRequest)
 	if err != nil {
 		log.ErrorR(r, err, log.Data{"_message": "Error calling render server", "format": format})
-		return nil, "", http.StatusInternalServerError, err
+		return nil, nil, http.StatusInternalServerError, err
 	}
 
 	// return content from the renderResponse
-	return renderResponse.Body, renderResponse.Header.Get("Content-Type"), renderResponse.StatusCode, nil
+	return renderResponse.Body, createHeaders(renderResponse, uri, format), renderResponse.StatusCode, nil
 }
 
 // createContentRequest creates the request to send to the content server, extracting headers and cookies form the source request as appropriate
@@ -117,7 +117,7 @@ func createContentRequest(downloader *Downloader, uri string, r *http.Request) (
 	if cookie != nil {
 		path += "/" + cookie.Value
 	}
-	contentRequest, err := http.NewRequest("GET", downloader.contentHost+ path + "?uri="+uri, nil)
+	contentRequest, err := http.NewRequest("GET", downloader.contentHost+path+"?uri="+uri, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -139,4 +139,18 @@ func copyHeaders(source *http.Request, dest *http.Request) {
 	if cookie != nil {
 		dest.Header.Add(tokenHeader, cookie.Value)
 	}
+}
+
+// getContentType extracts the Content-Type from the response and puts it in a map
+func getContentType(response *http.Response) map[string]string {
+	return map[string]string{"Content-Type": response.Header.Get("Content-Type")}
+}
+
+// createHeaders extracts the content type form the response and constructs a filename from the last path element of the uri and the format
+func createHeaders(response *http.Response, uri string, format string) map[string]string {
+	headers := getContentType(response)
+	paths := strings.Split(uri, "/")
+	filename := strings.TrimSuffix(paths[len(paths)-1], ".json") + "." + format
+	headers["Content-Disposition"] = "attachment; filename=\"" + filename + "\""
+	return headers
 }

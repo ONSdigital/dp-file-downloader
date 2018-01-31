@@ -78,7 +78,9 @@ func routes(router *mux.Router, downloaders ...Downloader) *DownloaderAPI {
 		for _, q := range d.QueryParameters() {
 			queries = append(queries, q, "{"+q+"}")
 		}
-		api.router.Path("/download/" + d.Type()).Methods("GET").Queries(queries...).HandlerFunc(handleDownload(d.Download))
+		path := "/download/" + d.Type()
+		api.router.Path(path).Methods("GET").Queries(queries...).HandlerFunc(handleDownload(d.Download))
+		log.Debug("Handling GET method on path " + path, log.Data{"query_parameters": d.QueryParameters()})
 	}
 
 	return &api

@@ -39,6 +39,17 @@ node {
             sh "tar -cvzf dp-file-downloader-${revision}.tar.gz appspec.yml scripts/codedeploy"
             sh "aws s3 cp dp-file-downloader-${revision}.tar.gz s3://${env.S3_REVISIONS_BUCKET}/"
         }
+
+        stage('Deploy') {
+            for (group in [env.CODEDEPLOY_FRONTEND_DEPLOYMENT_GROUP, env.CODEDEPLOY_PUBLISHING_DEPLOYMENT_GROUP]) {
+                sh sprintf('aws deploy create-deployment %s %s %s,bundleType=tgz,key=%s', [
+                    "--application-name dp-file-downloader",
+                    "--deployment-group-name ${group}",
+                    "--s3-location bucket=${env.S3_REVISIONS_BUCKET}",
+                    "dp-file-downloader-${revision}.tar.gz",
+                ])
+            }
+        }
     }
 }
 

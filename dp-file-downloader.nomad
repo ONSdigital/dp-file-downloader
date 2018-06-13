@@ -20,6 +20,13 @@ job "dp-file-downloader" {
       value     = "web.*"
     }
 
+    restart {
+      attempts = 3
+      delay    = "15s"
+      interval = "1m"
+      mode     = "delay"
+    }
+
     task "dp-file-downloader" {
       driver = "docker"
 
@@ -81,6 +88,13 @@ job "dp-file-downloader" {
       attribute = "${node.class}"
       operator  = "regexp"
       value     = "publishing.*"
+    }
+
+    restart {
+      attempts = 3
+      delay    = "15s"
+      interval = "1m"
+      mode     = "delay"
     }
 
     task "dp-file-downloader" {

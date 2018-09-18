@@ -17,7 +17,14 @@ job "dp-file-downloader" {
     constraint {
       attribute = "${node.class}"
       operator  = "regexp"
-      value     = "web.*"
+      value     = "web"
+    }
+
+    restart {
+      attempts = 3
+      delay    = "15s"
+      interval = "1m"
+      mode     = "delay"
     }
 
     task "dp-file-downloader" {
@@ -30,9 +37,7 @@ job "dp-file-downloader" {
       config {
         command = "${NOMAD_TASK_DIR}/start-task"
 
-        args = [
-          "./dp-file-downloader",
-        ]
+        args = ["./dp-file-downloader"]
 
         image = "{{ECR_URL}}:concourse-{{REVISION}}"
 
@@ -80,7 +85,14 @@ job "dp-file-downloader" {
     constraint {
       attribute = "${node.class}"
       operator  = "regexp"
-      value     = "publishing.*"
+      value     = "publishing"
+    }
+
+    restart {
+      attempts = 3
+      delay    = "15s"
+      interval = "1m"
+      mode     = "delay"
     }
 
     task "dp-file-downloader" {
@@ -93,9 +105,7 @@ job "dp-file-downloader" {
       config {
         command = "${NOMAD_TASK_DIR}/start-task"
 
-        args = [
-          "./dp-file-downloader",
-        ]
+        args = ["./dp-file-downloader"]
 
         image = "{{ECR_URL}}:concourse-{{REVISION}}"
 

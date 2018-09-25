@@ -1,0 +1,7 @@
+FROM onsdigital/dp-concourse-tools-ubuntu
+
+WORKDIR /app/
+
+ADD dp-file-downloader .
+
+CMD ./dp-file-downloader

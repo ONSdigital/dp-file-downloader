@@ -9,6 +9,7 @@ import (
 
 	"github.com/ONSdigital/dp-file-downloader/api"
 	"github.com/ONSdigital/dp-file-downloader/config"
+	"github.com/ONSdigital/dp-file-downloader/table"
 	"github.com/ONSdigital/go-ns/healthcheck"
 	"github.com/ONSdigital/go-ns/log"
 )
@@ -29,12 +30,14 @@ func main() {
 
 	healthTicker := healthcheck.NewTicker(
 		cfg.HealthCheckInterval,
-		healthcheck.NewClient("dp-table-renderer", cfg.TableRendererHost+"/healthcheck"),
+		healthcheck.NewDefaultClient("dp-table-renderer", cfg.TableRendererHost+"/healthcheck"),
 	)
 
 	apiErrors := make(chan error, 1)
 
-	api.CreateDownloaderAPI(cfg.BindAddr, cfg.CORSAllowedOrigins, apiErrors)
+	tableDownloader := table.NewDownloader(cfg.ContentServerHost, cfg.TableRendererHost)
+
+	api.StartDownloaderAPI(cfg.BindAddr, cfg.CORSAllowedOrigins, apiErrors, &tableDownloader)
 
 	// Gracefully shutdown the application closing any open resources.
 	gracefulShutdown := func() {

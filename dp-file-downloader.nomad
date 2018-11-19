@@ -16,7 +16,6 @@ job "dp-file-downloader" {
 
     constraint {
       attribute = "${node.class}"
-      operator  = "regexp"
       value     = "web"
     }
 
@@ -84,7 +83,6 @@ job "dp-file-downloader" {
 
     constraint {
       attribute = "${node.class}"
-      operator  = "regexp"
       value     = "publishing"
     }
 

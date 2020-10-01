@@ -12,4 +12,4 @@ inputs:
     path: dp-file-downloader
 
 run:
-  path: dp-code-list-api/ci/scripts/audit.sh
+  path: dp-file-downloader/ci/scripts/audit.sh

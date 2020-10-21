@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"testing"
 
 	"errors"
@@ -12,6 +13,7 @@ import (
 	"io/ioutil"
 
 	"github.com/ONSdigital/dp-file-downloader/api/testdata"
+	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	"github.com/gorilla/mux"
 	. "github.com/smartystreets/goconvey/convey"
 )
@@ -21,6 +23,9 @@ var responseHeaders = map[string]string{
 	"Content-Disposition": "attachment; filename=\"fname.ext\"",
 }
 
+var ctx = context.Background()
+var hcMock = healthcheck.HealthCheck{}
+
 func TestSuccessfulDownload(t *testing.T) {
 	t.Parallel()
 	Convey("Given an api with a mock implementation of Downloader", t, func() {
@@ -29,7 +34,7 @@ func TestSuccessfulDownload(t *testing.T) {
 		queryParam := "my-query-param"
 		mockDownloader := createMockDownloader("mock", []string{queryParam}, responseBody, http.StatusOK, nil)
 
-		api := routes(mux.NewRouter(), mockDownloader)
+		api := routes(ctx, mux.NewRouter(), &hcMock, mockDownloader)
 
 		Convey("When a route is invoked ", func() {
 
@@ -64,7 +69,7 @@ func TestReturnsCorrectStatus(t *testing.T) {
 		queryParam := "my-query-param"
 		mockDownloader := createMockDownloader("mock", []string{queryParam}, responseBody, http.StatusBadRequest, nil)
 
-		api := routes(mux.NewRouter(), mockDownloader)
+		api := routes(ctx, mux.NewRouter(), &hcMock, mockDownloader)
 
 		Convey("When a route is invoked ", func() {
 
@@ -94,7 +99,7 @@ func TestNotFound(t *testing.T) {
 		queryParam := "my-query-param"
 		mockDownloader := createMockDownloader("mock", []string{queryParam}, responseBody, http.StatusOK, nil)
 
-		api := routes(mux.NewRouter(), mockDownloader)
+		api := routes(ctx, mux.NewRouter(), &hcMock, mockDownloader)
 
 		Convey("When a route is invoked without a required query param", func() {
 			r, err := http.NewRequest("GET", "http://localhost/download/"+mockDownloader.Type(), nil)
@@ -132,7 +137,7 @@ func TestReturnsError(t *testing.T) {
 		downloadError := errors.New("This is an error")
 		mockDownloader := createMockDownloader("mock", []string{queryParam}, responseBody, http.StatusOK, downloadError)
 
-		api := routes(mux.NewRouter(), mockDownloader)
+		api := routes(ctx, mux.NewRouter(), &hcMock, mockDownloader)
 
 		Convey("When a route is invoked ", func() {
 
@@ -160,7 +165,7 @@ func TestReturnsBadRequest(t *testing.T) {
 		downloadError := errors.New("That was a bad request")
 		mockDownloader := createMockDownloader("mock", []string{queryParam}, responseBody, http.StatusBadRequest, downloadError)
 
-		api := routes(mux.NewRouter(), mockDownloader)
+		api := routes(ctx, mux.NewRouter(), &hcMock, mockDownloader)
 
 		Convey("When a route is invoked ", func() {
 

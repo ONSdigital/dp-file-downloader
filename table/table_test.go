@@ -1,6 +1,8 @@
 package table_test
 
 import (
+	"context"
+	"fmt"
 	"testing"
 
 	"net/http"
@@ -10,6 +12,7 @@ import (
 	"io"
 	"io/ioutil"
 
+	"github.com/ONSdigital/dp-api-clients-go/zebedee"
 	"github.com/ONSdigital/dp-file-downloader/table"
 	"github.com/ONSdigital/dp-file-downloader/table/testdata"
 	. "github.com/smartystreets/goconvey/convey"
@@ -17,6 +20,24 @@ import (
 
 const contentHost = "content"
 const renderHost = "render"
+
+func createZebedeeClientMock(body string, err error) *testdata.ZebedeeClientMock {
+	return &testdata.ZebedeeClientMock{
+		GetResourceBodyFunc: func(ctx context.Context, userAccessToken string, collectionID string, lang string, uri string) ([]byte, error) {
+			return []byte(body), err
+		},
+	}
+}
+
+func createTableRenderClientMock(status int, testBody, contentType string, err error) *testdata.TableRendererClientMock {
+	header := http.Header{}
+	header.Add("Content-Type", contentType)
+	return &testdata.TableRendererClientMock{
+		PostBodyFunc: func(ctx context.Context, format string, body []byte) (*http.Response, error) {
+			return &http.Response{StatusCode: status, Body: ioutil.NopCloser(strings.NewReader(testBody)), Header: header}, err
+		},
+	}
+}
 
 func TestSuccessfulDownload(t *testing.T) {
 	t.Parallel()
@@ -34,33 +55,21 @@ func TestSuccessfulDownload(t *testing.T) {
 		initialRequest.AddCookie(&http.Cookie{Name: "access_token", Value: accessToken})
 		So(err, ShouldBeNil)
 
-		contentClient := createMockClient(http.StatusOK, contentServerResponse, "application/json")
-		renderClient := createMockClient(http.StatusOK, expectedContent, expectedContentType)
+		contentClient := createZebedeeClientMock(contentServerResponse, nil)
+		renderClient := createTableRenderClientMock(http.StatusOK, expectedContent, expectedContentType, nil)
 
-		testObj := table.NewDownloaderWithClients(contentClient, "http://"+contentHost, renderClient, "http://"+renderHost)
+		testObj := table.NewDownloader(contentClient, renderClient)
 
 		Convey("When Download is invoked ", func() {
 
 			responseBody, responseHeaders, responseStatus, responseErr := testObj.Download(initialRequest)
 
 			Convey("contentClient should be invoked correctly", func() {
-				So(len(contentClient.DoCalls()), ShouldEqual, 1)
-				request := contentClient.DoCalls()[0]
-				So(request.Req.URL.Host, ShouldEqual, contentHost)
-				So(request.Req.URL.Path, ShouldEqual, "/resource")
-				So(request.Req.URL.Query().Get("uri"), ShouldEqual, requestUri)
-				So(request.Req.Header.Get("X-Florence-Token"), ShouldEqual, accessToken)
-				So(request.Req.Header.Get("Accept-Encoding"), ShouldEqual, "application/json")
-				So(request.Req.Method, ShouldEqual, "GET")
+				So(len(contentClient.GetResourceBodyCalls()), ShouldEqual, 1)
 			})
 
 			Convey("renderClient should be invoked correctly", func() {
-				So(len(renderClient.DoCalls()), ShouldEqual, 1)
-				request := renderClient.DoCalls()[0]
-				So(request.Req.URL.Host, ShouldEqual, renderHost)
-				So(request.Req.URL.Path, ShouldEqual, "/render/"+requestFormat)
-				So(request.Req.Method, ShouldEqual, "POST")
-				So(readString(request.Req.Body, t), ShouldEqual, contentServerResponse)
+				So(len(renderClient.PostBodyCalls()), ShouldEqual, 1)
 			})
 
 			Convey("The correct response should be returned", func() {
@@ -92,32 +101,21 @@ func TestSuccessfulDownloadForSpecificCollection(t *testing.T) {
 		initialRequest.AddCookie(&http.Cookie{Name: "collection", Value: contentCollection})
 		So(err, ShouldBeNil)
 
-		contentClient := createMockClient(http.StatusOK, contentServerResponse, "application/json")
-		renderClient := createMockClient(http.StatusOK, expectedContent, expectedContentType)
+		contentClient := createZebedeeClientMock(contentServerResponse, nil)
+		renderClient := createTableRenderClientMock(http.StatusOK, expectedContent, expectedContentType, nil)
 
-		testObj := table.NewDownloaderWithClients(contentClient, "http://"+contentHost, renderClient, "http://"+renderHost)
+		testObj := table.NewDownloader(contentClient, renderClient)
 
 		Convey("When Download is invoked ", func() {
 
 			responseBody, responseHeaders, responseStatus, responseErr := testObj.Download(initialRequest)
 
 			Convey("contentClient should be invoked correctly", func() {
-				So(len(contentClient.DoCalls()), ShouldEqual, 1)
-				request := contentClient.DoCalls()[0]
-				So(request.Req.URL.Host, ShouldEqual, contentHost)
-				So(request.Req.URL.Path, ShouldEqual, "/resource/"+contentCollection)
-				So(request.Req.URL.Query().Get("uri"), ShouldEqual, requestUri)
-				So(request.Req.Header.Get("X-Florence-Token"), ShouldEqual, accessToken)
-				So(request.Req.Method, ShouldEqual, "GET")
+				So(len(contentClient.GetResourceBodyCalls()), ShouldEqual, 1)
 			})
 
 			Convey("renderClient should be invoked correctly", func() {
-				So(len(renderClient.DoCalls()), ShouldEqual, 1)
-				request := renderClient.DoCalls()[0]
-				So(request.Req.URL.Host, ShouldEqual, renderHost)
-				So(request.Req.URL.Path, ShouldEqual, "/render/"+requestFormat)
-				So(request.Req.Method, ShouldEqual, "POST")
-				So(readString(request.Req.Body, t), ShouldEqual, contentServerResponse)
+				So(len(renderClient.PostBodyCalls()), ShouldEqual, 1)
 			})
 
 			Convey("The correct response should be returned", func() {
@@ -144,17 +142,18 @@ func TestMissingContent(t *testing.T) {
 		So(err, ShouldBeNil)
 
 		expectedResponse := "Content could not be found"
-		contentClient := createMockClient(http.StatusNotFound, expectedResponse, "")
-		renderClient := createMockClient(http.StatusOK, "", "")
+		contentClient := createZebedeeClientMock("", zebedee.ErrInvalidZebedeeResponse{http.StatusNotFound, "test/url"})
+		renderClient := createTableRenderClientMock(http.StatusOK, "", "", nil)
 
-		testObj := table.NewDownloaderWithClients(contentClient, "http://"+contentHost, renderClient, "http://"+renderHost)
+		testObj := table.NewDownloader(contentClient, renderClient)
 
 		Convey("When Download is invoked ", func() {
 
 			responseBody, _, responseStatus, responseErr := testObj.Download(initialRequest)
 
 			Convey("A 404 response should be returned", func() {
-				So(responseErr, ShouldBeNil)
+				So(responseErr, ShouldEqual, errors.New("test error"))
+				fmt.Print(responseErr)
 				So(responseStatus, ShouldEqual, http.StatusNotFound)
 				So(readString(responseBody, t), ShouldEqual, expectedResponse)
 			})
@@ -171,14 +170,10 @@ func TestContentServerError(t *testing.T) {
 
 		expectedErr := errors.New("The content server is down")
 
-		contentClient := &testdata.HttpClientMock{
-			DoFunc: func(req *http.Request) (*http.Response, error) {
-				return nil, expectedErr
-			},
-		}
-		renderClient := createMockClient(http.StatusOK, "", "")
+		contentClient := createZebedeeClientMock("", zebedee.ErrInvalidZebedeeResponse{http.StatusInternalServerError, "test/url"})
+		renderClient := createTableRenderClientMock(http.StatusOK, "", "", nil)
 
-		testObj := table.NewDownloaderWithClients(contentClient, "http://"+contentHost, renderClient, "http://"+renderHost)
+		testObj := table.NewDownloader(contentClient, renderClient)
 
 		Convey("When Download is invoked ", func() {
 
@@ -201,14 +196,10 @@ func TestRenderServerError(t *testing.T) {
 
 		expectedErr := errors.New("The render server is down")
 
-		contentClient := createMockClient(http.StatusOK, "contentServerResponse", "application/json")
-		renderClient := &testdata.HttpClientMock{
-			DoFunc: func(req *http.Request) (*http.Response, error) {
-				return nil, expectedErr
-			},
-		}
+		contentClient := createZebedeeClientMock("contentServerResponse", nil)
+		renderClient := createTableRenderClientMock(http.StatusOK, "", "", expectedErr)
 
-		testObj := table.NewDownloaderWithClients(contentClient, "http://"+contentHost, renderClient, "http://"+renderHost)
+		testObj := table.NewDownloader(contentClient, renderClient)
 
 		Convey("When Download is invoked ", func() {
 
@@ -220,16 +211,6 @@ func TestRenderServerError(t *testing.T) {
 			})
 		})
 	})
-}
-
-func createMockClient(status int, response string, contentType string) *testdata.HttpClientMock {
-	header := http.Header{}
-	header.Add("Content-Type", contentType)
-	return &testdata.HttpClientMock{
-		DoFunc: func(req *http.Request) (*http.Response, error) {
-			return &http.Response{StatusCode: status, Body: ioutil.NopCloser(strings.NewReader(response)), Header: header}, nil
-		},
-	}
 }
 
 func readString(reader io.Reader, t *testing.T) string {

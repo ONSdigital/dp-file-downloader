@@ -3,9 +3,9 @@ package api
 import (
 	"context"
 
-	"github.com/ONSdigital/go-ns/healthcheck"
-	"github.com/ONSdigital/go-ns/log"
-	"github.com/ONSdigital/go-ns/server"
+	"github.com/ONSdigital/dp-healthcheck/healthcheck"
+	dphttp "github.com/ONSdigital/dp-net/http"
+	"github.com/ONSdigital/log.go/log"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 
@@ -13,7 +13,7 @@ import (
 	"net/http"
 )
 
-var httpServer *server.Server
+var httpServer *dphttp.Server
 
 // DownloaderAPI manages requests to download files, calling the necessary backend services to fulfill the request
 type DownloaderAPI struct {
@@ -39,18 +39,18 @@ type Downloader interface {
 }
 
 // StartDownloaderAPI manages all the routes configured to the downloader
-func StartDownloaderAPI(bindAddr string, allowedOrigins string, errorChan chan error, downloaders ...Downloader) *DownloaderAPI {
+func StartDownloaderAPI(ctx context.Context, bindAddr string, allowedOrigins string, errorChan chan error, hc *healthcheck.HealthCheck, downloaders ...Downloader) *DownloaderAPI {
 	router := mux.NewRouter()
-	api := routes(router, downloaders...)
+	api := routes(ctx, router, hc, downloaders...)
 
-	httpServer = server.New(bindAddr, createCORSHandler(allowedOrigins, router))
+	httpServer = dphttp.NewServer(bindAddr, router)
 	// Disable this here to allow main to manage graceful shutdown of the entire app.
 	httpServer.HandleOSSignals = false
 
 	go func() {
-		log.Debug("Starting file downloader...", nil)
-		if err := httpServer.ListenAndServe(); err != nil {
-			log.ErrorC("api", err, log.Data{"MethodInError": "httpServer.ListenAndServe()"})
+		log.Event(ctx, "starting file downloader...", log.INFO)
+		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Event(ctx, "error occurred when running ListenAndServe", log.ERROR, log.Error(err))
 			errorChan <- err
 		}
 	}()
@@ -68,10 +68,10 @@ func createCORSHandler(allowedOrigins string, router *mux.Router) http.Handler {
 }
 
 // routes contain all endpoints for the downloader
-func routes(router *mux.Router, downloaders ...Downloader) *DownloaderAPI {
+func routes(ctx context.Context, router *mux.Router, hc *healthcheck.HealthCheck, downloaders ...Downloader) *DownloaderAPI {
 	api := DownloaderAPI{router: router}
 
-	router.Path("/healthcheck").Methods("GET").HandlerFunc(healthcheck.Do)
+	api.router.StrictSlash(true).Path("/health").HandlerFunc(hc.Handler)
 
 	for _, d := range downloaders {
 		queries := []string{}
@@ -80,7 +80,7 @@ func routes(router *mux.Router, downloaders ...Downloader) *DownloaderAPI {
 		}
 		path := "/download/" + d.Type()
 		api.router.Path(path).Methods("GET").Queries(queries...).HandlerFunc(handleDownload(d.Download))
-		log.Debug("Handling GET method on path "+path, log.Data{"query_parameters": d.QueryParameters()})
+		log.Event(ctx, "handling GET method on path "+path, log.INFO, log.Data{"query_parameters": d.QueryParameters()})
 	}
 
 	return &api
@@ -92,7 +92,7 @@ func Close(ctx context.Context) error {
 		return err
 	}
 
-	log.Info("graceful shutdown of http server complete", nil)
+	log.Event(ctx, "graceful shutdown of http server complete", log.INFO)
 	return nil
 }
 
@@ -103,11 +103,11 @@ func handleDownload(handler func(r *http.Request) (io.ReadCloser, map[string]str
 		defer func() {
 			err := reader.Close()
 			if err != nil {
-				log.ErrorR(request, err, log.Data{"_message": "Unable to close reader cleanly"})
+				log.Event(request.Context(), "unable to close reader cleanly", log.ERROR)
 			}
 		}()
 		if err != nil {
-			log.ErrorR(request, err, log.Data{"_message": "handleDownload: Error returned from handler", "request:": request})
+			log.Event(request.Context(), "handleDownload: Error returned from handler", log.ERROR, log.Data{"request:": request})
 			if status < 400 {
 				status = http.StatusInternalServerError
 			}
@@ -120,7 +120,7 @@ func handleDownload(handler func(r *http.Request) (io.ReadCloser, map[string]str
 			// write body
 			_, err := io.Copy(w, reader)
 			if err != nil {
-				log.ErrorR(request, err, log.Data{"_message": "handleDownload: Error while copying from reader", "request:": request})
+				log.Event(request.Context(), "handleDownload: Error while copying from reader", log.ERROR, log.Data{"request:": request})
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 			}
 		}

@@ -1,14 +1,16 @@
 package table
 
 import (
+	"context"
+	"errors"
 	"io"
 	"net/http"
 	"strings"
 
-	"fmt"
-
-	"github.com/ONSdigital/go-ns/log"
-	"github.com/ONSdigital/go-ns/rhttp"
+	"github.com/ONSdigital/dp-api-clients-go/zebedee"
+	dphandlers "github.com/ONSdigital/dp-net/handlers"
+	"github.com/ONSdigital/dp-net/request"
+	"github.com/ONSdigital/log.go/log"
 )
 
 var (
@@ -21,31 +23,15 @@ var (
 
 // Downloader implements api.Downloader.
 type Downloader struct {
-	contentClient  HTTPClient
-	contentHost    string
-	rendererClient HTTPClient
-	rendererHost   string
-}
-
-//go:generate moq -out testdata/mock_httpclient.go -pkg testdata . HTTPClient
-
-// HTTPClient is implemented by http.Client etc.
-type HTTPClient interface {
-	Do(req *http.Request) (*http.Response, error)
+	contentClient  ZebedeeClient
+	rendererClient TableRendererClient
 }
 
 // NewDownloader returns a new Downloader using rhttp.DefaultClient
-func NewDownloader(contentHost string, rendererHost string) Downloader {
-	return NewDownloaderWithClients(rhttp.DefaultClient, contentHost, rhttp.DefaultClient, rendererHost)
-}
-
-// NewDownloaderWithClients returns a new Downloader using the given clients
-func NewDownloaderWithClients(contentClient HTTPClient, contentHost string, rendererClient HTTPClient, rendererHost string) Downloader {
+func NewDownloader(contentClient ZebedeeClient, rendererClient TableRendererClient) Downloader {
 	return Downloader{
 		contentClient:  contentClient,
-		contentHost:    contentHost,
 		rendererClient: rendererClient,
-		rendererHost:   rendererHost,
 	}
 }
 
@@ -68,62 +54,45 @@ func (downloader *Downloader) Download(r *http.Request) (responseBody io.ReadClo
 	format := r.URL.Query().Get(formatParam)
 	uri := r.URL.Query().Get(uriParam)
 
+	ctx := r.Context()
+	lang, collectionID, userAccessToken := getHeaderValues(ctx, r)
+
 	// call the content server to get the json definition of the table
-	contentRequest, err := createContentRequest(downloader, uri, r)
+	contentResponseBody, err := downloader.contentClient.GetResourceBody(ctx, userAccessToken, collectionID, lang, uri)
 	if err != nil {
-		log.ErrorR(r, err, log.Data{"_message": "Unable to create HttpRequest to call content server"})
-		return nil, nil, http.StatusInternalServerError, err
-	}
-	contentResponse, err := downloader.contentClient.Do(contentRequest)
-	if err != nil {
-		log.ErrorR(r, err, log.Data{"_message": "Error calling content server", "uri": uri})
-		return nil, nil, http.StatusInternalServerError, err
-	}
-	if contentResponse.StatusCode != 200 {
-		err = fmt.Errorf("Unexpected response from content server. Status=%d", contentResponse.StatusCode)
-		log.ErrorR(r, err, log.Data{"uri": uri})
-		return contentResponse.Body, getContentType(contentResponse), contentResponse.StatusCode, nil
-	}
-	defer func() {
-		err := contentResponse.Body.Close()
-		if err != nil {
-			log.ErrorR(r, err, log.Data{"_message": "Unable to close the response from the content server cleanly"})
+		log.Event(ctx, "error calling content server", log.ERROR, log.Error(err))
+		var e *zebedee.ErrInvalidZebedeeResponse
+		if errors.As(err, &e) {
+			if e.ActualCode == http.StatusNotFound {
+				return nil, nil, e.ActualCode, nil
+			}
+			return nil, nil, e.ActualCode, errors.New("i got this error")
 		}
-	}()
+		return nil, nil, http.StatusInternalServerError, err
+	}
 
 	// post the json definition to the renderer
-	renderRequest, err := http.NewRequest("POST", downloader.rendererHost+"/render/"+format, contentResponse.Body)
+	renderResponse, err := downloader.rendererClient.PostBody(ctx, format, contentResponseBody)
 	if err != nil {
-		log.ErrorR(r, err, log.Data{"_message": "Unable to create HttpRequest to call render server"})
-		return nil, nil, http.StatusInternalServerError, err
-	}
-	copyHeaders(r, renderRequest)
-	renderRequest.Header.Set("Content-Type", "application/json")
-	renderResponse, err := downloader.rendererClient.Do(renderRequest)
-	if err != nil {
-		log.ErrorR(r, err, log.Data{"_message": "Error calling render server", "format": format})
+		log.Event(ctx, "error calling renderer server", log.ERROR, log.Error(err))
 		return nil, nil, http.StatusInternalServerError, err
 	}
 
-	// return content from the renderResponse
 	return renderResponse.Body, createHeaders(renderResponse, uri, format), renderResponse.StatusCode, nil
 }
 
 // createContentRequest creates the request to send to the content server, extracting headers and cookies form the source request as appropriate
-func createContentRequest(downloader *Downloader, uri string, r *http.Request) (*http.Request, error) {
-	path := "/resource"
-	// append the requested collection, if one is present as a cookie
-	cookie, _ := r.Cookie(collectionCookie)
-	if cookie != nil {
-		path += "/" + cookie.Value
-	}
-	contentRequest, err := http.NewRequest("GET", downloader.contentHost+path+"?uri="+uri, nil)
+func getHeaderValues(ctx context.Context, r *http.Request) (string, string, string) {
+	locale := request.GetLocaleCode(r)
+	collectionID, err := request.GetCollectionID(r)
 	if err != nil {
-		return nil, err
+		log.Event(ctx, "unexpected error when getting collection id", log.ERROR, log.Error(err))
 	}
-	copyHeaders(r, contentRequest)
-	contentRequest.Header.Set("Accept-Encoding", "application/json")
-	return contentRequest, err
+	accessToken, err := dphandlers.GetFlorenceToken(ctx, r)
+	if err != nil {
+		log.Event(ctx, "unexpected error when getting access token", log.ERROR, log.Error(err))
+	}
+	return locale, collectionID, accessToken
 }
 
 // copyHeaders copies headers from the source request to the destination, and sets X-Florence-Token if there's an access_token cookie in the source.

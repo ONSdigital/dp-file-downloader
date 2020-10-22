@@ -61,12 +61,12 @@ func (downloader *Downloader) Download(r *http.Request) (responseBody io.ReadClo
 	contentResponseBody, err := downloader.contentClient.GetResourceBody(ctx, userAccessToken, collectionID, lang, uri)
 	if err != nil {
 		log.Event(ctx, "error calling content server", log.ERROR, log.Error(err))
-		var e *zebedee.ErrInvalidZebedeeResponse
+		var e zebedee.ErrInvalidZebedeeResponse
 		if errors.As(err, &e) {
 			if e.ActualCode == http.StatusNotFound {
 				return nil, nil, e.ActualCode, nil
 			}
-			return nil, nil, e.ActualCode, errors.New("i got this error")
+			return nil, nil, e.ActualCode, err
 		}
 		return nil, nil, http.StatusInternalServerError, err
 	}

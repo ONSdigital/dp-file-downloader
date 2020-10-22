@@ -2,7 +2,6 @@ package table_test
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"net/http"
@@ -15,6 +14,7 @@ import (
 	"github.com/ONSdigital/dp-api-clients-go/zebedee"
 	"github.com/ONSdigital/dp-file-downloader/table"
 	"github.com/ONSdigital/dp-file-downloader/table/testdata"
+	"github.com/davecgh/go-spew/spew"
 	. "github.com/smartystreets/goconvey/convey"
 )
 
@@ -151,9 +151,10 @@ func TestMissingContent(t *testing.T) {
 
 			responseBody, _, responseStatus, responseErr := testObj.Download(initialRequest)
 
+			spew.Dump("RESPONSE >>>>", expectedResponse)
+
 			Convey("A 404 response should be returned", func() {
-				So(responseErr, ShouldEqual, errors.New("test error"))
-				fmt.Print(responseErr)
+				So(responseErr, ShouldBeNil)
 				So(responseStatus, ShouldEqual, http.StatusNotFound)
 				So(readString(responseBody, t), ShouldEqual, expectedResponse)
 			})
@@ -168,7 +169,7 @@ func TestContentServerError(t *testing.T) {
 		initialRequest, err := http.NewRequest("GET", "http://localhost/download/table?format=html&uri=/foo/bar", nil)
 		So(err, ShouldBeNil)
 
-		expectedErr := errors.New("The content server is down")
+		expectedErr := zebedee.ErrInvalidZebedeeResponse{http.StatusInternalServerError, "test/url"}
 
 		contentClient := createZebedeeClientMock("", zebedee.ErrInvalidZebedeeResponse{http.StatusInternalServerError, "test/url"})
 		renderClient := createTableRenderClientMock(http.StatusOK, "", "", nil)
@@ -180,7 +181,7 @@ func TestContentServerError(t *testing.T) {
 			_, _, responseStatus, responseErr := testObj.Download(initialRequest)
 
 			Convey("An error should be returned", func() {
-				So(responseErr, ShouldEqual, expectedErr)
+				So(responseErr, ShouldResemble, expectedErr)
 				So(responseStatus, ShouldEqual, http.StatusInternalServerError)
 			})
 		})

@@ -10,7 +10,6 @@ image_resource:
 
 inputs:
   - name: dp-file-downloader
-    path: go/src/github.com/ONSdigital/dp-file-downloader
 
 run:
   path: dp-file-downloader/ci/scripts/audit.sh

@@ -11,7 +11,7 @@ import (
 	healthcheck "github.com/ONSdigital/dp-api-clients-go/health"
 	"github.com/ONSdigital/dp-api-clients-go/zebedee"
 	"github.com/ONSdigital/dp-file-downloader/api"
-	table_renderer "github.com/ONSdigital/dp-file-downloader/clients/table-renderer"
+	tableRenderer "github.com/ONSdigital/dp-file-downloader/clients/table-renderer"
 	"github.com/ONSdigital/dp-file-downloader/config"
 	"github.com/ONSdigital/dp-file-downloader/table"
 	health "github.com/ONSdigital/dp-healthcheck/healthcheck"
@@ -57,7 +57,7 @@ func main() {
 	apiRouterCli := healthcheck.NewClient("api-router", cfg.APIRouterURL)
 
 	zc := zebedee.NewWithHealthClient(apiRouterCli)
-	tabrend := table_renderer.New(cfg.TableRendererHost)
+	tabrend := tableRenderer.New(cfg.TableRendererHost)
 
 	healthcheck := health.New(versionInfo, cfg.HealthCheckCriticalTimeout, cfg.HealthCheckInterval)
 
@@ -123,7 +123,7 @@ func main() {
 
 }
 
-func registerCheckers(ctx context.Context, h *health.HealthCheck, r *table_renderer.Client, apiRouterCli *healthcheck.Client) (err error) {
+func registerCheckers(ctx context.Context, h *health.HealthCheck, r *tableRenderer.Client, apiRouterCli *healthcheck.Client) (err error) {
 
 	hasErrors := false
 

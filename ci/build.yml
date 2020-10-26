@@ -15,4 +15,4 @@ outputs:
   - name: build
 
 run:
-  path: dp-file-downloader/ci/scripts/audit.sh
+  path: dp-file-downloader/ci/scripts/build.sh

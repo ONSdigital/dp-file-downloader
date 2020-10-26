@@ -16,4 +16,4 @@ outputs:
   - name: build
 
 run:
-  path: go/src/github.com/ONSdigital/dp-file-downloader/ci/scripts/build.sh
+  path: dp-file-downloader/ci/scripts/audit.sh

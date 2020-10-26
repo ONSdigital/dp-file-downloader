@@ -13,4 +13,4 @@ inputs:
     path: go/src/github.com/ONSdigital/dp-file-downloader
 
 run:
-  path: go/src/github.com/ONSdigital/dp-file-downloader/ci/scripts/unit.sh
+  path: dp-file-downloader/ci/scripts/audit.sh

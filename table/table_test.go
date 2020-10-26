@@ -156,7 +156,7 @@ func TestMissingContent(t *testing.T) {
 			Convey("A 404 response should be returned", func() {
 				So(responseErr, ShouldBeNil)
 				So(responseStatus, ShouldEqual, http.StatusNotFound)
-				So(readString(responseBody, t), ShouldEqual, expectedResponse)
+				So(responseBody, ShouldBeNil)
 			})
 		})
 	})

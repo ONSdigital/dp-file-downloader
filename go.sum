@@ -2,6 +2,8 @@ github.com/ONSdigital/dp-api-clients-go v1.1.0 h1:j2zmSFcWWRbHs58m0+LltmijHBqbnO
 github.com/ONSdigital/dp-api-clients-go v1.1.0/go.mod h1:9lqor0I7caCnRWr04gU/r7x5dqxgoODob8L48q+cE4E=
 github.com/ONSdigital/dp-api-clients-go v1.28.0 h1:ExIUlHC6uBdBlFwt/gAI0ApSzpyigy0NWJFK3XCwSVc=
 github.com/ONSdigital/dp-api-clients-go v1.28.0/go.mod h1:iyJy6uRL4B6OYOJA0XMr5UHt6+Q8XmN9uwmURO+9Oj4=
+github.com/ONSdigital/dp-api-clients-go v1.30.2 h1:tsqZbQJW0h7x8NzgjPueNd6JhjAggfrOXJNvCWaIwpM=
+github.com/ONSdigital/dp-api-clients-go v1.30.2/go.mod h1:iyJy6uRL4B6OYOJA0XMr5UHt6+Q8XmN9uwmURO+9Oj4=
 github.com/ONSdigital/dp-file-downloader v1.0.1 h1:45YTi0OA30vIXMjqpmgTDKRmfh493eE7b6XFoB8U40A=
 github.com/ONSdigital/dp-file-downloader v1.0.1/go.mod h1:WLJXMRCPGvd+bfeRDkNovkdD9unHO5PaRRP7+neUwqU=
 github.com/ONSdigital/dp-frontend-models v1.1.0/go.mod h1:TT96P7Mi69N3Tc/jFNdbjiwG4GAaMjP26HLotFQ6BPw=

@@ -22,7 +22,7 @@ audit:
 
 .PHONY: build
 build:
-	go build -tags 'production' -o $(BUILD_DIR)/dp-file-downloader -ldflags "-X main.BuildTime=$(BUILD_TIME) -X main.GitCommit=$(GIT_COMMIT) -X main.Version=$(VERSION)" cmd/dp-file-downloader/main.go
+	go build -tags 'production' -o $(BIN_DIR)/dp-file-downloader -ldflags "-X main.BuildTime=$(BUILD_TIME) -X main.GitCommit=$(GIT_COMMIT) -X main.Version=$(VERSION)" cmd/dp-file-downloader/main.go
 	@mkdir -p $(BIN_DIR) 
 
 .PHONY: debug

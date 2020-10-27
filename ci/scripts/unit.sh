@@ -1,7 +1,7 @@
 #!/bin/bash -eux
 
-export GOPATH=$(pwd)/go
+export cwd=$(pwd)
 
-pushd $GOPATH/dp-file-downloader
+pushd $cwd/dp-file-downloader
   make test
 popd

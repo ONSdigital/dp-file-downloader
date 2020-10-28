@@ -3,5 +3,5 @@
 export cwd=$(pwd)
 
 pushd $cwd/dp-file-downloader
-  make test
+  make audit
 popd

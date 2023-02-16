@@ -101,9 +101,11 @@ func handleDownload(handler func(r *http.Request) (io.ReadCloser, map[string]str
 	return func(w http.ResponseWriter, request *http.Request) {
 		reader, headers, status, err := handler(request)
 		defer func() {
-			err := reader.Close()
-			if err != nil {
-				log.Event(request.Context(), "unable to close reader cleanly", log.ERROR)
+			if reader != nil {
+				err := reader.Close()
+				if err != nil {
+					log.Event(request.Context(), "unable to close reader cleanly", log.ERROR)
+				}
 			}
 		}()
 		if err != nil {

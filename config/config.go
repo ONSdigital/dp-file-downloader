@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/ONSdigital/log.go/log"
+	"github.com/ONSdigital/log.go/v2/log"
 	"github.com/kelseyhightower/envconfig"
 )
 
@@ -44,7 +44,7 @@ func Get() (*Config, error) {
 
 // Log writes all config properties to log.Debug
 func (cfg *Config) Log(ctx context.Context) {
-	log.Event(ctx, "Configuration", log.INFO, log.Data{
+	log.Info(ctx, "Configuration", log.Data{
 		"BindAddr":                   cfg.BindAddr,
 		"CORSAllowedOrigins":         cfg.CORSAllowedOrigins,
 		"ShutdownTimeout":            cfg.ShutdownTimeout,

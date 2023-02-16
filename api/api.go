@@ -5,7 +5,7 @@ import (
 
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	dphttp "github.com/ONSdigital/dp-net/http"
-	"github.com/ONSdigital/log.go/log"
+	"github.com/ONSdigital/log.go/v2/log"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 
@@ -48,9 +48,9 @@ func StartDownloaderAPI(ctx context.Context, bindAddr string, allowedOrigins str
 	httpServer.HandleOSSignals = false
 
 	go func() {
-		log.Event(ctx, "starting file downloader...", log.INFO)
+		log.Info(ctx, "starting file downloader...")
 		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Event(ctx, "error occurred when running ListenAndServe", log.ERROR, log.Error(err))
+			log.Error(ctx, "error occurred when running ListenAndServe", err)
 			errorChan <- err
 		}
 	}()
@@ -80,7 +80,7 @@ func routes(ctx context.Context, router *mux.Router, hc *healthcheck.HealthCheck
 		}
 		path := "/download/" + d.Type()
 		api.router.Path(path).Methods("GET").Queries(queries...).HandlerFunc(handleDownload(d.Download))
-		log.Event(ctx, "handling GET method on path "+path, log.INFO, log.Data{"query_parameters": d.QueryParameters()})
+		log.Info(ctx, "handling GET method on path "+path, log.Data{"query_parameters": d.QueryParameters()})
 	}
 
 	return &api
@@ -92,7 +92,7 @@ func Close(ctx context.Context) error {
 		return err
 	}
 
-	log.Event(ctx, "graceful shutdown of http server complete", log.INFO)
+	log.Info(ctx, "graceful shutdown of http server complete")
 	return nil
 }
 
@@ -100,16 +100,17 @@ func Close(ctx context.Context) error {
 func handleDownload(handler func(r *http.Request) (io.ReadCloser, map[string]string, int, error)) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, request *http.Request) {
 		reader, headers, status, err := handler(request)
+		ctx := request.Context()
 		defer func() {
 			if reader != nil {
 				err := reader.Close()
 				if err != nil {
-					log.Event(request.Context(), "unable to close reader cleanly", log.ERROR)
+					log.Error(ctx, "unable to close reader cleanly", err)
 				}
 			}
 		}()
 		if err != nil {
-			log.Event(request.Context(), "handleDownload: Error returned from handler", log.ERROR, log.Data{"request:": request})
+			log.Error(ctx, "handleDownload: Error returned from handler", err, log.Data{"request:": request})
 			if status < 400 {
 				status = http.StatusInternalServerError
 			}
@@ -122,7 +123,7 @@ func handleDownload(handler func(r *http.Request) (io.ReadCloser, map[string]str
 			// write body
 			_, err := io.Copy(w, reader)
 			if err != nil {
-				log.Event(request.Context(), "handleDownload: Error while copying from reader", log.ERROR, log.Data{"request:": request})
+				log.Error(ctx, "handleDownload: Error while copying from reader", err, log.Data{"request:": request})
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 			}
 		}

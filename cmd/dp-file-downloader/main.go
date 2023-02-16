@@ -15,7 +15,7 @@ import (
 	"github.com/ONSdigital/dp-file-downloader/config"
 	"github.com/ONSdigital/dp-file-downloader/table"
 	health "github.com/ONSdigital/dp-healthcheck/healthcheck"
-	"github.com/ONSdigital/log.go/log"
+	"github.com/ONSdigital/log.go/v2/log"
 )
 
 var (
@@ -37,7 +37,7 @@ func main() {
 
 	cfg, err := config.Get()
 	if err != nil {
-		log.Event(ctx, "unable to retrieve service configuration", log.FATAL, log.Error(err))
+		log.Fatal(ctx, "unable to retrieve service configuration", err)
 		os.Exit(1)
 	}
 
@@ -50,8 +50,7 @@ func main() {
 		Version,
 	)
 	if err != nil {
-		log.Event(ctx, "failed to create service version information", log.ERROR, log.Error(err))
-		//return err
+		log.Error(ctx, "failed to create service version information", err)
 	}
 
 	apiRouterCli := healthcheck.NewClient("api-router", cfg.APIRouterURL)
@@ -75,7 +74,7 @@ func main() {
 
 	// Gracefully shutdown the application closing any open resources.
 	gracefulShutdown := func() {
-		log.Event(ctx, fmt.Sprintf("Shutdown with timeout: %s", cfg.ShutdownTimeout), log.INFO)
+		log.Info(ctx, fmt.Sprintf("Shutdown with timeout: %s", cfg.ShutdownTimeout))
 		ctx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
 
 		var gracefulShutdown bool
@@ -84,11 +83,12 @@ func main() {
 			defer cancel()
 			var hasShutdownErrs bool
 
-			log.Event(ctx, "stop health checkers", log.INFO)
+			log.Info(ctx, "stop health checkers")
 			healthcheck.Stop()
 
 			if err = api.Close(ctx); err != nil {
-				log.Event(ctx, "error with graceful shutdown", log.ERROR, log.Error(err))
+				log.Error(ctx, "error closing api", err)
+				hasShutdownErrs = true
 			}
 
 			if !hasShutdownErrs {
@@ -99,25 +99,25 @@ func main() {
 		// wait for timeout or success (via cancel)
 		<-ctx.Done()
 		if ctx.Err() == context.DeadlineExceeded {
-			log.Event(ctx, "context deadline exceeded", log.WARN, log.Error(ctx.Err()))
+			log.Warn(ctx, "context deadline exceeded, enforcing shutdown", log.FormatErrors([]error{ctx.Err()}))
 			os.Exit(1)
 		}
 
 		if !gracefulShutdown {
-			err = errors.New("failed to shutdown gracefully")
-			log.Event(ctx, "failed to shutdown gracefully ", log.ERROR, log.Error(err))
+			err = errors.New("failed to close dependencies; failed to shutdown gracefully")
+			log.Error(ctx, "failed to shutdown gracefully", err)
 			os.Exit(1)
 		}
 
-		log.Event(ctx, "graceful shutdown complete", log.INFO, log.Data{"context": ctx.Err()})
+		log.Info(ctx, "graceful shutdown complete", log.Data{"context": ctx.Err()})
 	}
 
 	select {
 	case err := <-apiErrors:
-		log.Event(ctx, "api error received", log.ERROR, log.Error(err))
+		log.Error(ctx, "api error received", err)
 		gracefulShutdown()
 	case signal := <-signals:
-		log.Event(ctx, "os signal received", log.INFO, log.Data{"signal": signal})
+		log.Info(ctx, "os signal received", log.Data{"signal": signal})
 		gracefulShutdown()
 	}
 
@@ -129,12 +129,12 @@ func registerCheckers(ctx context.Context, h *health.HealthCheck, r *tableRender
 
 	if err = h.AddCheck("frontend renderer", r.Checker); err != nil {
 		hasErrors = true
-		log.Event(ctx, "failed to add frontend renderer checker", log.ERROR, log.Error(err))
+		log.Error(ctx, "failed to add frontend renderer checker", err)
 	}
 
 	if err = h.AddCheck("API router", apiRouterCli.Checker); err != nil {
 		hasErrors = true
-		log.Event(ctx, "failed to add API router health checker", log.ERROR, log.Error(err))
+		log.Error(ctx, "failed to add API router health checker", err)
 	}
 
 	if hasErrors {

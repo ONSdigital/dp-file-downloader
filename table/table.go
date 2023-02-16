@@ -10,7 +10,7 @@ import (
 	"github.com/ONSdigital/dp-api-clients-go/zebedee"
 	dphandlers "github.com/ONSdigital/dp-net/handlers"
 	"github.com/ONSdigital/dp-net/request"
-	"github.com/ONSdigital/log.go/log"
+	"github.com/ONSdigital/log.go/v2/log"
 )
 
 var (
@@ -60,7 +60,7 @@ func (downloader *Downloader) Download(r *http.Request) (responseBody io.ReadClo
 	// call the content server to get the json definition of the table
 	contentResponseBody, err := downloader.contentClient.GetResourceBody(ctx, userAccessToken, collectionID, lang, uri)
 	if err != nil {
-		log.Event(ctx, "error calling content server", log.ERROR, log.Error(err))
+		log.Error(ctx, "error calling content server", err)
 		var e zebedee.ErrInvalidZebedeeResponse
 		if errors.As(err, &e) {
 			if e.ActualCode == http.StatusNotFound {
@@ -74,7 +74,7 @@ func (downloader *Downloader) Download(r *http.Request) (responseBody io.ReadClo
 	// post the json definition to the renderer
 	renderResponse, err := downloader.rendererClient.PostBody(ctx, format, contentResponseBody)
 	if err != nil {
-		log.Event(ctx, "error calling renderer server", log.ERROR, log.Error(err))
+		log.Error(ctx, "error calling renderer server", err)
 		return nil, nil, http.StatusInternalServerError, err
 	}
 
@@ -86,11 +86,11 @@ func getHeaderValues(ctx context.Context, r *http.Request) (string, string, stri
 	locale := request.GetLocaleCode(r)
 	collectionID, err := request.GetCollectionID(r)
 	if err != nil {
-		log.Event(ctx, "unexpected error when getting collection id", log.ERROR, log.Error(err))
+		log.Error(ctx, "unexpected error when getting collection id", err)
 	}
 	accessToken, err := dphandlers.GetFlorenceToken(ctx, r)
 	if err != nil {
-		log.Event(ctx, "unexpected error when getting access token", log.ERROR, log.Error(err))
+		log.Error(ctx, "unexpected error when getting access token", err)
 	}
 	return locale, collectionID, accessToken
 }

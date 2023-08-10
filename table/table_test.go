@@ -178,7 +178,7 @@ func TestContentServerError(t *testing.T) {
 
 			Convey("An error should be returned", func() {
 				So(responseErr, ShouldResemble, expectedErr)
-				So(responseStatus, ShouldEqual, http.StatusInternalServerError)
+				So(responseStatus, ShouldEqual, http.StatusBadRequest)
 			})
 		})
 	})

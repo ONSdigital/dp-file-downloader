@@ -213,22 +213,22 @@ func TestRenderServerError(t *testing.T) {
 func TestBadlyFormedRequest(t *testing.T) {
 	t.Parallel()
 	Convey("Given a TableDownloader and a badly formed request", t, func() {
-		initialRequest, err := http.NewRequest("GET", "http://localhost/download/table?ghgkgl", nil)
+		initialRequest, err := http.NewRequest("GET", "http://localhost/download/table?format=&hjkhjl", nil)
 		So(err, ShouldBeNil)
 
 		expectedErr := errors.New("Badly formed request")
 
 		contentClient := createZebedeeClientMock("", nil)
-		renderClient := createTableRenderClientMock(http.StatusOK, "", "", expectedErr)
+		renderClient := createTableRenderClientMock(http.StatusBadRequest, "", "", expectedErr)
 
 		testObj := table.NewDownloader(contentClient, renderClient)
 
 		Convey("When Download is invoked", func() {
 			_, _, responseStatus, responseErr := testObj.Download(initialRequest)
 
-			Convey("A bad request (500) response should be returned", func() {
+			Convey("A bad request (400) response should be returned", func() {
 				So(responseErr, ShouldEqual, expectedErr)
-				So(responseStatus, ShouldEqual, http.StatusInternalServerError)
+				So(responseStatus, ShouldEqual, http.StatusBadRequest)
 			})
 		})
 	})

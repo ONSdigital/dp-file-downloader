@@ -65,6 +65,8 @@ func (downloader *Downloader) Download(r *http.Request) (responseBody io.ReadClo
 		if errors.As(err, &e) {
 			if e.ActualCode == http.StatusNotFound {
 				return nil, nil, e.ActualCode, nil
+			} else if e.ActualCode == http.StatusInternalServerError {
+				return nil, nil, http.StatusInternalServerError, err
 			}
 			return nil, nil, http.StatusBadRequest, err
 		}

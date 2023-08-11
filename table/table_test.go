@@ -178,7 +178,7 @@ func TestContentServerError(t *testing.T) {
 
 			Convey("An error should be returned", func() {
 				So(responseErr, ShouldResemble, expectedErr)
-				So(responseStatus, ShouldEqual, http.StatusBadRequest)
+				So(responseStatus, ShouldEqual, http.StatusInternalServerError)
 			})
 		})
 	})
@@ -203,6 +203,30 @@ func TestRenderServerError(t *testing.T) {
 			_, _, responseStatus, responseErr := testObj.Download(initialRequest)
 
 			Convey("An error should be returned", func() {
+				So(responseErr, ShouldEqual, expectedErr)
+				So(responseStatus, ShouldEqual, http.StatusInternalServerError)
+			})
+		})
+	})
+}
+
+func TestBadlyFormedRequest(t *testing.T) {
+	t.Parallel()
+	Convey("Given a TableDownloader and a badly formed request", t, func() {
+		initialRequest, err := http.NewRequest("GET", "http://localhost/download/table?ghgkgl", nil)
+		So(err, ShouldBeNil)
+
+		expectedErr := errors.New("Badly formed request")
+
+		contentClient := createZebedeeClientMock("", nil)
+		renderClient := createTableRenderClientMock(http.StatusOK, "", "", expectedErr)
+
+		testObj := table.NewDownloader(contentClient, renderClient)
+
+		Convey("When Download is invoked", func() {
+			_, _, responseStatus, responseErr := testObj.Download(initialRequest)
+
+			Convey("A bad request (500) response should be returned", func() {
 				So(responseErr, ShouldEqual, expectedErr)
 				So(responseStatus, ShouldEqual, http.StatusInternalServerError)
 			})

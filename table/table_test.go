@@ -212,7 +212,7 @@ func TestRenderServerError(t *testing.T) {
 
 func TestBadlyFormedRequest(t *testing.T) {
 	t.Parallel()
-	Convey("Given a TableDownloader and a request to download content that doesn't exist", t, func() {
+	Convey("Given a TableDownloader and a badly formed request", t, func() {
 
 		requestUri := "ghjghjkghj"
 		requestFormat := "html"

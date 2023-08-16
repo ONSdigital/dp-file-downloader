@@ -2,10 +2,10 @@ package table_test
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"net/http"
-	"strings"
 
 	"errors"
 	"io"
@@ -212,23 +212,29 @@ func TestRenderServerError(t *testing.T) {
 
 func TestBadlyFormedRequest(t *testing.T) {
 	t.Parallel()
-	Convey("Given a TableDownloader and a badly formed request", t, func() {
-		initialRequest, err := http.NewRequest("GET", "http://localhost/download/table?format=&hjkhjl", nil)
+	Convey("Given a TableDownloader and a request to download content that doesn't exist", t, func() {
+
+		requestUri := "ghjghjkghj"
+		requestFormat := "html"
+		accessToken := "myAccessToken"
+
+		initialRequest, err := http.NewRequest("GET", "http://localhost/download/table?format="+requestFormat+"&uri="+requestUri, nil)
+		initialRequest.AddCookie(&http.Cookie{Name: "access_token", Value: accessToken})
 		So(err, ShouldBeNil)
 
-		expectedErr := errors.New("Badly formed request")
-
-		contentClient := createZebedeeClientMock("", nil)
-		renderClient := createTableRenderClientMock(http.StatusBadRequest, "", "", expectedErr)
+		contentClient := createZebedeeClientMock("", zebedee.ErrInvalidZebedeeResponse{http.StatusBadRequest, "test/url"})
+		renderClient := createTableRenderClientMock(http.StatusOK, "", "", nil)
 
 		testObj := table.NewDownloader(contentClient, renderClient)
 
-		Convey("When Download is invoked", func() {
-			_, _, responseStatus, responseErr := testObj.Download(initialRequest)
+		Convey("When Download is invoked ", func() {
 
-			Convey("A bad request (400) response should be returned", func() {
-				So(responseErr, ShouldEqual, expectedErr)
+			responseBody, _, responseStatus, responseErr := testObj.Download(initialRequest)
+
+			Convey("A 400 response should be returned", func() {
+				So(responseErr, ShouldNotBeNil)
 				So(responseStatus, ShouldEqual, http.StatusBadRequest)
+				So(responseBody, ShouldBeNil)
 			})
 		})
 	})

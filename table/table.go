@@ -60,11 +60,26 @@ func (downloader *Downloader) Download(r *http.Request) (responseBody io.ReadClo
 	// call the content server to get the json definition of the table
 	contentResponseBody, err := downloader.contentClient.GetResourceBody(ctx, userAccessToken, collectionID, lang, uri)
 	if err != nil {
+		if uri == "" {
+			return nil, nil, http.StatusBadRequest, errors.New("Bad request")
+		} else if format == "" {
+			return nil, nil, http.StatusBadRequest, errors.New("Bad request")
+		}
+		validFormat := false
+		array := []string{"xlsx", "html"}
+		for _, v := range array {
+			if v == format {
+				validFormat = true
+			}
+		}
+		if !validFormat {
+			return nil, nil, http.StatusBadRequest, errors.New("Bad request")
+		}
 		log.Error(ctx, "error calling content server", err)
 		var e zebedee.ErrInvalidZebedeeResponse
 		if errors.As(err, &e) {
 			if e.ActualCode == http.StatusNotFound {
-				return nil, nil, e.ActualCode, nil
+				return nil, nil, http.StatusNotFound, err
 			} else if e.ActualCode == http.StatusInternalServerError {
 				return nil, nil, http.StatusInternalServerError, err
 			}

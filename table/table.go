@@ -61,9 +61,9 @@ func (downloader *Downloader) Download(r *http.Request) (responseBody io.ReadClo
 	contentResponseBody, err := downloader.contentClient.GetResourceBody(ctx, userAccessToken, collectionID, lang, uri)
 	if err != nil {
 		if uri == "" {
-			return nil, nil, http.StatusBadRequest, errors.New("Bad request")
+			return nil, nil, http.StatusBadRequest, err
 		} else if format == "" {
-			return nil, nil, http.StatusBadRequest, errors.New("Bad request")
+			return nil, nil, http.StatusBadRequest, err
 		}
 		validFormat := false
 		array := []string{"xlsx", "html"}
@@ -73,7 +73,7 @@ func (downloader *Downloader) Download(r *http.Request) (responseBody io.ReadClo
 			}
 		}
 		if !validFormat {
-			return nil, nil, http.StatusBadRequest, errors.New("Bad request")
+			return nil, nil, http.StatusBadRequest, err
 		}
 		log.Error(ctx, "error calling content server", err)
 		var e zebedee.ErrInvalidZebedeeResponse

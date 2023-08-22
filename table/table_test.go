@@ -188,7 +188,7 @@ func TestRenderServerError(t *testing.T) {
 	t.Parallel()
 	Convey("Given the render service is down", t, func() {
 
-		initialRequest, err := http.NewRequest("GET", "http://localhost/download/table?format=&uri=", nil)
+		initialRequest, err := http.NewRequest("GET", "http://localhost/download/table?format=html&uri=/foo/bar", nil)
 		So(err, ShouldBeNil)
 
 		expectedErr := errors.New("The render server is down")

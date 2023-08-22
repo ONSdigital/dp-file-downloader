@@ -57,15 +57,14 @@ func (downloader *Downloader) Download(r *http.Request) (responseBody io.ReadClo
 	ctx := r.Context()
 	lang, collectionID, userAccessToken := getHeaderValues(ctx, r)
 
+	err := validateURL(format, uri)
+	if err != nil {
+		return nil, nil, http.StatusBadRequest, err
+	}
+
 	// call the content server to get the json definition of the table
 	contentResponseBody, err := downloader.contentClient.GetResourceBody(ctx, userAccessToken, collectionID, lang, uri)
 	if err != nil {
-		if format == "" {
-			var errResponse zebedee.ErrInvalidZebedeeResponse
-			errResponse.ActualCode = http.StatusBadRequest
-			errResponse.URI = uri
-			return nil, nil, http.StatusBadRequest, errResponse
-		}
 		log.Error(ctx, "error calling content server", err)
 		var e zebedee.ErrInvalidZebedeeResponse
 		if errors.As(err, &e) {
@@ -130,4 +129,11 @@ func createHeaders(response *http.Response, uri string, format string) map[strin
 	filename := strings.TrimSuffix(paths[len(paths)-1], ".json") + "." + format
 	headers["Content-Disposition"] = "attachment; filename=\"" + filename + "\""
 	return headers
+}
+
+func validateURL(format, uri string) (err error) {
+	if format == "" || uri == "" {
+		return errors.New("bad request")
+	}
+	return nil
 }

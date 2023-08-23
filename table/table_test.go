@@ -2,10 +2,10 @@ package table_test
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"net/http"
-	"strings"
 
 	"errors"
 	"io"
@@ -150,7 +150,7 @@ func TestMissingContent(t *testing.T) {
 			responseBody, _, responseStatus, responseErr := testObj.Download(initialRequest)
 
 			Convey("A 404 response should be returned", func() {
-				So(responseErr, ShouldBeNil)
+				So(responseErr, ShouldNotBeNil)
 				So(responseStatus, ShouldEqual, http.StatusNotFound)
 				So(responseBody, ShouldBeNil)
 			})
@@ -188,7 +188,7 @@ func TestRenderServerError(t *testing.T) {
 	t.Parallel()
 	Convey("Given the render service is down", t, func() {
 
-		initialRequest, err := http.NewRequest("GET", "http://localhost/download/table?format=&uri=", nil)
+		initialRequest, err := http.NewRequest("GET", "http://localhost/download/table?format=html&uri=/foo/bar", nil)
 		So(err, ShouldBeNil)
 
 		expectedErr := errors.New("The render server is down")
@@ -205,6 +205,36 @@ func TestRenderServerError(t *testing.T) {
 			Convey("An error should be returned", func() {
 				So(responseErr, ShouldEqual, expectedErr)
 				So(responseStatus, ShouldEqual, http.StatusInternalServerError)
+			})
+		})
+	})
+}
+
+func TestBadlyFormedRequest(t *testing.T) {
+	t.Parallel()
+	Convey("Given a TableDownloader and a badly formed request", t, func() {
+
+		requestUri := "ghjghjkghj"
+		requestFormat := "html"
+		accessToken := "myAccessToken"
+
+		initialRequest, err := http.NewRequest("GET", "http://localhost/download/table?format="+requestFormat+"&uri="+requestUri, nil)
+		initialRequest.AddCookie(&http.Cookie{Name: "access_token", Value: accessToken})
+		So(err, ShouldBeNil)
+
+		contentClient := createZebedeeClientMock("", zebedee.ErrInvalidZebedeeResponse{http.StatusBadRequest, "test/url"})
+		renderClient := createTableRenderClientMock(http.StatusOK, "", "", nil)
+
+		testObj := table.NewDownloader(contentClient, renderClient)
+
+		Convey("When Download is invoked ", func() {
+
+			responseBody, _, responseStatus, responseErr := testObj.Download(initialRequest)
+
+			Convey("A 400 response should be returned", func() {
+				So(responseErr, ShouldNotBeNil)
+				So(responseStatus, ShouldEqual, http.StatusBadRequest)
+				So(responseBody, ShouldBeNil)
 			})
 		})
 	})

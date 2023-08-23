@@ -101,18 +101,6 @@ func TestNotFound(t *testing.T) {
 
 		api := routes(ctx, mux.NewRouter(), &hcMock, mockDownloader)
 
-		Convey("When a route is invoked without a required query param", func() {
-			r, err := http.NewRequest("GET", "http://localhost/download/"+mockDownloader.Type(), nil)
-			So(err, ShouldBeNil)
-
-			w := httptest.NewRecorder()
-			api.router.ServeHTTP(w, r)
-
-			Convey("Then a 404 response should be returned", func() {
-				So(w.Code, ShouldEqual, http.StatusNotFound)
-			})
-		})
-
 		Convey("When a route is invoked with the wrong type", func() {
 			r, err := http.NewRequest("GET", "http://localhost/download/foo"+"?"+queryParam+"=foo", nil)
 			So(err, ShouldBeNil)

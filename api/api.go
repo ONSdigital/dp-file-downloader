@@ -74,12 +74,8 @@ func routes(ctx context.Context, router *mux.Router, hc *healthcheck.HealthCheck
 	api.router.StrictSlash(true).Path("/health").HandlerFunc(hc.Handler)
 
 	for _, d := range downloaders {
-		queries := []string{}
-		for _, q := range d.QueryParameters() {
-			queries = append(queries, q, "{"+q+"}")
-		}
 		path := "/download/" + d.Type()
-		api.router.Path(path).Methods("GET").Queries(queries...).HandlerFunc(handleDownload(d.Download))
+		api.router.Path(path).Methods("GET").HandlerFunc(handleDownload(d.Download))
 		log.Info(ctx, "handling GET method on path "+path, log.Data{"query_parameters": d.QueryParameters()})
 	}
 

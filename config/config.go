@@ -15,6 +15,9 @@ type Config struct {
 	ShutdownTimeout            time.Duration `envconfig:"SHUTDOWN_TIMEOUT"`
 	HealthCheckCriticalTimeout time.Duration `envconfig:"HEALTHCHECK_CRITICAL_TIMEOUT"`
 	HealthCheckInterval        time.Duration `envconfig:"HEALTHCHECK_INTERVAL"`
+	OTBatchTimeout             time.Duration `encconfig:"OTEL_BATCH_TIMEOUT"`
+	OTServiceName              string        `envconfig:"OTEL_SERVICE_NAME"`
+	OTExporterOTLPEndpoint     string        `envconfig:"OTEL_EXPORTER_OTLP_ENDPOINT"`
 	TableRendererHost          string        `envconfig:"TABLE_RENDERER_HOST"`
 	ContentServerHost          string        `envconfig:"CONTENT_SERVER_HOST"`
 	APIRouterURL               string        `envconfig:"API_ROUTER_URL"`
@@ -34,6 +37,9 @@ func Get() (*Config, error) {
 		ShutdownTimeout:            5 * time.Second,
 		HealthCheckCriticalTimeout: 90 * time.Second,
 		HealthCheckInterval:        30 * time.Second,
+		OTBatchTimeout:             5 * time.Second,
+		OTExporterOTLPEndpoint:     "localhost:4317",
+		OTServiceName:              "dp-file-downloader",
 		TableRendererHost:          "http://localhost:23300",
 		ContentServerHost:          "http://localhost:8082",
 		APIRouterURL:               "http://localhost:23200/v1",

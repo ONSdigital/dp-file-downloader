@@ -70,7 +70,7 @@ func main() {
 
 	tableDownloader := table.NewDownloader(zc, tabrend)
 
-	api.StartDownloaderAPI(ctx, cfg.BindAddr, cfg.CORSAllowedOrigins, apiErrors, &healthcheck, &tableDownloader)
+	api.StartDownloaderAPI(ctx, cfg, apiErrors, &healthcheck, &tableDownloader)
 
 	// Gracefully shutdown the application closing any open resources.
 	gracefulShutdown := func() {

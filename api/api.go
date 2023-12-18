@@ -2,15 +2,22 @@ package api
 
 import (
 	"context"
+	"errors"
 
+	"github.com/ONSdigital/dp-file-downloader/config"
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	dphttp "github.com/ONSdigital/dp-net/http"
+	dpotelgo "github.com/ONSdigital/dp-otel-go"
 	"github.com/ONSdigital/log.go/v2/log"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 
 	"io"
 	"net/http"
+
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel"
 )
 
 var httpServer *dphttp.Server
@@ -39,16 +46,36 @@ type Downloader interface {
 }
 
 // StartDownloaderAPI manages all the routes configured to the downloader
-func StartDownloaderAPI(ctx context.Context, bindAddr string, allowedOrigins string, errorChan chan error, hc *healthcheck.HealthCheck, downloaders ...Downloader) *DownloaderAPI {
+func StartDownloaderAPI(ctx context.Context, cfg *config.Config, errorChan chan error, hc *healthcheck.HealthCheck, downloaders ...Downloader) *DownloaderAPI {
 	router := mux.NewRouter()
+	otelHandler := otelhttp.NewHandler(router, "/")
+	router.Use(otelmux.Middleware(cfg.OTServiceName))
+
 	api := routes(ctx, router, hc, downloaders...)
 
-	httpServer = dphttp.NewServer(bindAddr, router)
+	httpServer = dphttp.NewServer(cfg.BindAddr, otelHandler)
 	// Disable this here to allow main to manage graceful shutdown of the entire app.
 	httpServer.HandleOSSignals = false
 
 	go func() {
 		log.Info(ctx, "starting file downloader...")
+
+		// Set up OpenTelemetry
+		otelConfig := dpotelgo.Config{
+			OtelServiceName:          cfg.OTServiceName,
+			OtelExporterOtlpEndpoint: cfg.OTExporterOTLPEndpoint,
+		}
+
+		otelShutdown, oErr := dpotelgo.SetupOTelSDK(ctx, otelConfig)
+		if oErr != nil {
+			log.Fatal(ctx, "error setting up OpenTelemetry - hint: ensure OTEL_EXPORTER_OTLP_ENDPOINT is set", oErr)
+		}
+		// Handle shutdown properly so nothing leaks.
+		defer func() {
+			oErr = errors.Join(oErr, otelShutdown(context.Background()))
+			errorChan <- oErr
+		}()
+
 		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Error(ctx, "error occurred when running ListenAndServe", err)
 			errorChan <- err
@@ -117,11 +144,15 @@ func handleDownload(handler func(r *http.Request) (io.ReadCloser, map[string]str
 			}
 			w.WriteHeader(status)
 			// write body
+			// span?
+			tracer := otel.GetTracerProvider().Tracer("handledownload")
+			_, span := tracer.Start(ctx, "handle download span")
 			_, err := io.Copy(w, reader)
 			if err != nil {
 				log.Error(ctx, "handleDownload: Error while copying from reader", err, log.Data{"request:": request})
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 			}
+			defer span.End()
 		}
 	}
 }

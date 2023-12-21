@@ -3,6 +3,8 @@ package api
 import (
 	"context"
 	"errors"
+	"io"
+	"net/http"
 
 	"github.com/ONSdigital/dp-file-downloader/config"
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
@@ -11,10 +13,6 @@ import (
 	"github.com/ONSdigital/log.go/v2/log"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
-
-	"io"
-	"net/http"
-
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )

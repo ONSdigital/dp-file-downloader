@@ -1,6 +1,6 @@
 module github.com/ONSdigital/dp-file-downloader
 
-go 1.19
+go 1.21
 
 require (
 	github.com/ONSdigital/dp-api-clients-go v1.43.0

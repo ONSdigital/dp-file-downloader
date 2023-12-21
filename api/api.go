@@ -17,7 +17,6 @@ import (
 
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
-	"go.opentelemetry.io/otel"
 )
 
 var httpServer *dphttp.Server
@@ -144,15 +143,11 @@ func handleDownload(handler func(r *http.Request) (io.ReadCloser, map[string]str
 			}
 			w.WriteHeader(status)
 			// write body
-			// span?
-			tracer := otel.GetTracerProvider().Tracer("handledownload")
-			_, span := tracer.Start(ctx, "handle download span")
 			_, err := io.Copy(w, reader)
 			if err != nil {
 				log.Error(ctx, "handleDownload: Error while copying from reader", err, log.Data{"request:": request})
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 			}
-			defer span.End()
 		}
 	}
 }

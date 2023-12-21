@@ -59,8 +59,9 @@ func StartDownloaderAPI(ctx context.Context, cfg *config.Config, errorChan chan 
 
 		// Set up OpenTelemetry
 		otelConfig := dpotelgo.Config{
-			OtelServiceName:          cfg.OTServiceName,
+			OtelBatchTimeout:         cfg.OTBatchTimeout,
 			OtelExporterOtlpEndpoint: cfg.OTExporterOTLPEndpoint,
+			OtelServiceName:          cfg.OTServiceName,
 		}
 
 		otelShutdown, oErr := dpotelgo.SetupOTelSDK(ctx, otelConfig)

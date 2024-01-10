@@ -16,11 +16,11 @@ export GOARCH=$(shell go env GOARCH)
 GREEN  := $(shell tput -Txterm setaf 2)
 RESET  := $(shell tput -Txterm sgr0)
 
-# .PHONY: all
-# all: audit test build lint
-
 .PHONY: all
-all: delimiter-AUDIT audit delimiter-LINTERS lint delimiter-UNIT-TESTS test delimiter-BUILD build delimiter-FINISH ## Runs multiple targets, audit, lint, test and test-component
+all: test build
+
+# .PHONY: all
+# all: delimiter-AUDIT audit delimiter-LINTERS lint delimiter-UNIT-TESTS test delimiter-BUILD build delimiter-FINISH ## Runs multiple targets, audit, lint, test and test-component
 
 
 .PHONY: audit

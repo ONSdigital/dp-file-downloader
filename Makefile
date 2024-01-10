@@ -33,3 +33,12 @@ debug:
 .PHONY: test
 test:
 	go test -cover $(shell go list ./... | grep -v /vendor/)
+
+.PHONY: lint
+lint: ## Used in ci to run linters against Go code
+	golangci-lint run ./...
+
+.PHONY: lint-local
+lint-local: ## Use locally to run linters against Go code
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.55.2
+	golangci-lint run ./...

@@ -14,7 +14,7 @@ func TestSpec(t *testing.T) {
 		Convey("When the config values are retrieved", func() {
 
 			Convey("There should be no error returned", func() {
-				So(err, ShouldBeNil)
+				So(err, ShouldBeNil)  
 			})
 
 			Convey("The values should be set to the expected defaults", func() {

@@ -13,8 +13,15 @@ VERSION ?= $(shell git tag --points-at HEAD | grep ^v | head -n 1)
 export GOOS=$(shell go env GOOS)
 export GOARCH=$(shell go env GOARCH)
 
+GREEN  := $(shell tput -Txterm setaf 2)
+RESET  := $(shell tput -Txterm sgr0)
+
+# .PHONY: all
+# all: audit test build lint
+
 .PHONY: all
-all: audit test build lint
+all: delimiter-AUDIT audit delimiter-LINTERS lint delimiter-UNIT-TESTS test delimiter-BUILD build delimiter-FINISH ## Runs multiple targets, audit, lint, test and test-component
+
 
 .PHONY: audit
 audit:
@@ -42,3 +49,8 @@ lint: ## Used in ci to run linters against Go code
 lint-local: ## Use locally to run linters against Go code
 	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.55.2
 	golangci-lint run ./...
+
+.PHONY: delimiter-%
+delimiter-%:
+	@echo '===================${GREEN} $* ${RESET}==================='
+

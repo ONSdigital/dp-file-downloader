@@ -1,5 +1,5 @@
 #!/bin/bash -eux
 
-pushd dp-legacy-cache-api
+pushd dp-file-downloader
   make lint
 popd

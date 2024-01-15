@@ -11,7 +11,6 @@ import (
 	dphttp "github.com/ONSdigital/dp-net/http"
 	dpotelgo "github.com/ONSdigital/dp-otel-go"
 	"github.com/ONSdigital/log.go/v2/log"
-	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
@@ -24,7 +23,7 @@ type DownloaderAPI struct {
 	router *mux.Router
 }
 
-//cannot use "go:generate moq -out testdata/mock_downloader.go -pkg testdata . Downloader" here
+// cannot use "go:generate moq -out testdata/mock_downloader.go -pkg testdata . Downloader" here
 // as moq can't handle build tags and incorrectly believes there are duplicate methods in gorilla/mux
 // https://github.com/matryer/moq/issues/47
 
@@ -83,15 +82,6 @@ func StartDownloaderAPI(ctx context.Context, cfg *config.Config, errorChan chan 
 	return api
 }
 
-// createCORSHandler wraps the router in a CORS handler that responds to OPTIONS requests and returns the headers necessary to allow CORS-enabled clients to work
-func createCORSHandler(allowedOrigins string, router *mux.Router) http.Handler {
-	headersOk := handlers.AllowedHeaders([]string{"Accept", "Content-Type", "Access-Control-Allow-Origin", "Access-Control-Allow-Methods", "X-Requested-With"})
-	originsOk := handlers.AllowedOrigins([]string{allowedOrigins})
-	methodsOk := handlers.AllowedMethods([]string{"GET", "POST", "OPTIONS"})
-
-	return handlers.CORS(originsOk, headersOk, methodsOk)(router)
-}
-
 // routes contain all endpoints for the downloader
 func routes(ctx context.Context, router *mux.Router, hc *healthcheck.HealthCheck, downloaders ...Downloader) *DownloaderAPI {
 	api := DownloaderAPI{router: router}
@@ -124,9 +114,9 @@ func handleDownload(handler func(r *http.Request) (io.ReadCloser, map[string]str
 		ctx := request.Context()
 		defer func() {
 			if reader != nil {
-				err := reader.Close()
-				if err != nil {
-					log.Error(ctx, "unable to close reader cleanly", err)
+				readerErr := reader.Close()
+				if readerErr != nil {
+					log.Error(ctx, "unable to close reader cleanly", readerErr)
 				}
 			}
 		}()
@@ -146,6 +136,7 @@ func handleDownload(handler func(r *http.Request) (io.ReadCloser, map[string]str
 			if err != nil {
 				log.Error(ctx, "handleDownload: Error while copying from reader", err, log.Data{"request:": request})
 				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
 			}
 		}
 	}

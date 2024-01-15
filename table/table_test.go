@@ -9,7 +9,6 @@ import (
 
 	"errors"
 	"io"
-	"io/ioutil"
 
 	"github.com/ONSdigital/dp-api-clients-go/zebedee"
 	"github.com/ONSdigital/dp-file-downloader/table"
@@ -17,8 +16,15 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
-const contentHost = "content"
-const renderHost = "render"
+var requestURI = "/foo/bar.json"
+var requestFormat = "html"
+var expectedDisposition = "attachment; filename=\"bar.html\""
+var accessToken = "myAccessToken"
+var uriParam = "&uri="
+var expectedContentType = "text/html"
+var expectedContent = "renderServerResponse"
+var contentServerResponse = "contentServerResponse"
+var baseURL = "http://localhost/download/table?format="
 
 func createZebedeeClientMock(body string, err error) *testdata.ZebedeeClientMock {
 	return &testdata.ZebedeeClientMock{
@@ -28,12 +34,12 @@ func createZebedeeClientMock(body string, err error) *testdata.ZebedeeClientMock
 	}
 }
 
-func createTableRenderClientMock(status int, testBody, contentType string, err error) *testdata.TableRendererClientMock {
+func createTableRenderClientMock(status int, testBody, contentType string, err error) *testdata.RendererClientMock {
 	header := http.Header{}
 	header.Add("Content-Type", contentType)
-	return &testdata.TableRendererClientMock{
+	return &testdata.RendererClientMock{
 		PostBodyFunc: func(ctx context.Context, format string, body []byte) (*http.Response, error) {
-			return &http.Response{StatusCode: status, Body: ioutil.NopCloser(strings.NewReader(testBody)), Header: header}, err
+			return &http.Response{StatusCode: status, Body: io.NopCloser(strings.NewReader(testBody)), Header: header}, err
 		},
 	}
 }
@@ -41,16 +47,7 @@ func createTableRenderClientMock(status int, testBody, contentType string, err e
 func TestSuccessfulDownload(t *testing.T) {
 	t.Parallel()
 	Convey("Given a TableDownloader and a request to download a table", t, func() {
-
-		requestUri := "/foo/bar.json"
-		requestFormat := "html"
-		expectedDisposition := "attachment; filename=\"bar.html\""
-		accessToken := "myAccessToken"
-		expectedContentType := "text/html"
-		expectedContent := "renderServerResponse"
-		contentServerResponse := "contentServerResponse"
-
-		initialRequest, err := http.NewRequest("GET", "http://localhost/download/table?format="+requestFormat+"&uri="+requestUri, nil)
+		initialRequest, err := http.NewRequest("GET", baseURL+requestFormat+uriParam+requestURI, http.NoBody)
 		initialRequest.AddCookie(&http.Cookie{Name: "access_token", Value: accessToken})
 		So(err, ShouldBeNil)
 
@@ -60,7 +57,6 @@ func TestSuccessfulDownload(t *testing.T) {
 		testObj := table.NewDownloader(contentClient, renderClient)
 
 		Convey("When Download is invoked ", func() {
-
 			responseBody, responseHeaders, responseStatus, responseErr := testObj.Download(initialRequest)
 
 			Convey("contentClient should be invoked correctly", func() {
@@ -85,17 +81,9 @@ func TestSuccessfulDownload(t *testing.T) {
 func TestSuccessfulDownloadForSpecificCollection(t *testing.T) {
 	t.Parallel()
 	Convey("Given a TableDownloader and a request to download a table, with a cookie identifying a collection", t, func() {
-
-		requestUri := "/foo/bar.json"
-		requestFormat := "html"
-		expectedDisposition := "attachment; filename=\"bar.html\""
-		accessToken := "myAccessToken"
 		contentCollection := "myCollection"
-		expectedContentType := "text/html"
-		expectedContent := "renderServerResponse"
-		contentServerResponse := "contentServerResponse"
 
-		initialRequest, err := http.NewRequest("GET", "http://localhost/download/table?format="+requestFormat+"&uri="+requestUri, nil)
+		initialRequest, err := http.NewRequest("GET", baseURL+requestFormat+uriParam+requestURI, http.NoBody)
 		initialRequest.AddCookie(&http.Cookie{Name: "access_token", Value: accessToken})
 		initialRequest.AddCookie(&http.Cookie{Name: "collection", Value: contentCollection})
 		So(err, ShouldBeNil)
@@ -106,7 +94,6 @@ func TestSuccessfulDownloadForSpecificCollection(t *testing.T) {
 		testObj := table.NewDownloader(contentClient, renderClient)
 
 		Convey("When Download is invoked ", func() {
-
 			responseBody, responseHeaders, responseStatus, responseErr := testObj.Download(initialRequest)
 
 			Convey("contentClient should be invoked correctly", func() {
@@ -131,22 +118,18 @@ func TestSuccessfulDownloadForSpecificCollection(t *testing.T) {
 func TestMissingContent(t *testing.T) {
 	t.Parallel()
 	Convey("Given a TableDownloader and a request to download content that doesn't exist", t, func() {
+		requestURI := "/foo/bar"
 
-		requestUri := "/foo/bar"
-		requestFormat := "html"
-		accessToken := "myAccessToken"
-
-		initialRequest, err := http.NewRequest("GET", "http://localhost/download/table?format="+requestFormat+"&uri="+requestUri, nil)
+		initialRequest, err := http.NewRequest("GET", baseURL+requestFormat+uriParam+requestURI, http.NoBody)
 		initialRequest.AddCookie(&http.Cookie{Name: "access_token", Value: accessToken})
 		So(err, ShouldBeNil)
 
-		contentClient := createZebedeeClientMock("", zebedee.ErrInvalidZebedeeResponse{http.StatusNotFound, "test/url"})
+		contentClient := createZebedeeClientMock("", zebedee.ErrInvalidZebedeeResponse{ActualCode: http.StatusNotFound, URI: "test/url"})
 		renderClient := createTableRenderClientMock(http.StatusOK, "", "", nil)
 
 		testObj := table.NewDownloader(contentClient, renderClient)
 
 		Convey("When Download is invoked ", func() {
-
 			responseBody, _, responseStatus, responseErr := testObj.Download(initialRequest)
 
 			Convey("A 404 response should be returned", func() {
@@ -161,19 +144,17 @@ func TestMissingContent(t *testing.T) {
 func TestContentServerError(t *testing.T) {
 	t.Parallel()
 	Convey("Given the content server doesn't respond", t, func() {
-
-		initialRequest, err := http.NewRequest("GET", "http://localhost/download/table?format=html&uri=/foo/bar", nil)
+		initialRequest, err := http.NewRequest("GET", "http://localhost/download/table?format=html&uri=/foo/bar", http.NoBody)
 		So(err, ShouldBeNil)
 
-		expectedErr := zebedee.ErrInvalidZebedeeResponse{http.StatusInternalServerError, "test/url"}
+		expectedErr := zebedee.ErrInvalidZebedeeResponse{ActualCode: http.StatusInternalServerError, URI: "test/url"}
 
-		contentClient := createZebedeeClientMock("", zebedee.ErrInvalidZebedeeResponse{http.StatusInternalServerError, "test/url"})
+		contentClient := createZebedeeClientMock("", zebedee.ErrInvalidZebedeeResponse{ActualCode: http.StatusInternalServerError, URI: "test/url"})
 		renderClient := createTableRenderClientMock(http.StatusOK, "", "", nil)
 
 		testObj := table.NewDownloader(contentClient, renderClient)
 
 		Convey("When Download is invoked ", func() {
-
 			_, _, responseStatus, responseErr := testObj.Download(initialRequest)
 
 			Convey("An error should be returned", func() {
@@ -187,8 +168,7 @@ func TestContentServerError(t *testing.T) {
 func TestRenderServerError(t *testing.T) {
 	t.Parallel()
 	Convey("Given the render service is down", t, func() {
-
-		initialRequest, err := http.NewRequest("GET", "http://localhost/download/table?format=html&uri=/foo/bar", nil)
+		initialRequest, err := http.NewRequest("GET", "http://localhost/download/table?format=html&uri=/foo/bar", http.NoBody)
 		So(err, ShouldBeNil)
 
 		expectedErr := errors.New("The render server is down")
@@ -199,7 +179,6 @@ func TestRenderServerError(t *testing.T) {
 		testObj := table.NewDownloader(contentClient, renderClient)
 
 		Convey("When Download is invoked ", func() {
-
 			_, _, responseStatus, responseErr := testObj.Download(initialRequest)
 
 			Convey("An error should be returned", func() {
@@ -213,22 +192,19 @@ func TestRenderServerError(t *testing.T) {
 func TestBadlyFormedRequest(t *testing.T) {
 	t.Parallel()
 	Convey("Given a TableDownloader and a badly formed request", t, func() {
-
-		requestUri := "ghjghjkghj"
+		requestURI := "ghjghjkghj"
 		requestFormat := "html"
-		accessToken := "myAccessToken"
 
-		initialRequest, err := http.NewRequest("GET", "http://localhost/download/table?format="+requestFormat+"&uri="+requestUri, nil)
+		initialRequest, err := http.NewRequest("GET", "http://localhost/download/table?format="+requestFormat+uriParam+requestURI, http.NoBody)
 		initialRequest.AddCookie(&http.Cookie{Name: "access_token", Value: accessToken})
 		So(err, ShouldBeNil)
 
-		contentClient := createZebedeeClientMock("", zebedee.ErrInvalidZebedeeResponse{http.StatusBadRequest, "test/url"})
+		contentClient := createZebedeeClientMock("", zebedee.ErrInvalidZebedeeResponse{ActualCode: http.StatusBadRequest, URI: "test/url"})
 		renderClient := createTableRenderClientMock(http.StatusOK, "", "", nil)
 
 		testObj := table.NewDownloader(contentClient, renderClient)
 
 		Convey("When Download is invoked ", func() {
-
 			responseBody, _, responseStatus, responseErr := testObj.Download(initialRequest)
 
 			Convey("A 400 response should be returned", func() {
@@ -240,9 +216,9 @@ func TestBadlyFormedRequest(t *testing.T) {
 	})
 }
 
-func readString(reader io.Reader, t *testing.T) string {
+func readString(reader io.Reader, _ *testing.T) string {
 	So(reader, ShouldNotBeNil)
-	bytes, e := ioutil.ReadAll(reader)
+	bytes, e := io.ReadAll(reader)
 	So(e, ShouldBeNil)
 	return string(bytes)
 }

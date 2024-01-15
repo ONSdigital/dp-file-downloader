@@ -9,29 +9,25 @@ import (
 	"sync"
 )
 
-var (
-	lockZebedeeClientMockGetResourceBody sync.RWMutex
-)
-
 // Ensure, that ZebedeeClientMock does implement table.ZebedeeClient.
 // If this is not the case, regenerate this file with moq.
 var _ table.ZebedeeClient = &ZebedeeClientMock{}
 
 // ZebedeeClientMock is a mock implementation of table.ZebedeeClient.
 //
-//     func TestSomethingThatUsesZebedeeClient(t *testing.T) {
+//	func TestSomethingThatUsesZebedeeClient(t *testing.T) {
 //
-//         // make and configure a mocked table.ZebedeeClient
-//         mockedZebedeeClient := &ZebedeeClientMock{
-//             GetResourceBodyFunc: func(ctx context.Context, userAccessToken string, collectionID string, lang string, uri string) ([]byte, error) {
-// 	               panic("mock out the GetResourceBody method")
-//             },
-//         }
+//		// make and configure a mocked table.ZebedeeClient
+//		mockedZebedeeClient := &ZebedeeClientMock{
+//			GetResourceBodyFunc: func(ctx context.Context, userAccessToken string, collectionID string, lang string, uri string) ([]byte, error) {
+//				panic("mock out the GetResourceBody method")
+//			},
+//		}
 //
-//         // use mockedZebedeeClient in code that requires table.ZebedeeClient
-//         // and then make assertions.
+//		// use mockedZebedeeClient in code that requires table.ZebedeeClient
+//		// and then make assertions.
 //
-//     }
+//	}
 type ZebedeeClientMock struct {
 	// GetResourceBodyFunc mocks the GetResourceBody method.
 	GetResourceBodyFunc func(ctx context.Context, userAccessToken string, collectionID string, lang string, uri string) ([]byte, error)
@@ -52,6 +48,7 @@ type ZebedeeClientMock struct {
 			URI string
 		}
 	}
+	lockGetResourceBody sync.RWMutex
 }
 
 // GetResourceBody calls GetResourceBodyFunc.
@@ -72,15 +69,16 @@ func (mock *ZebedeeClientMock) GetResourceBody(ctx context.Context, userAccessTo
 		Lang:            lang,
 		URI:             uri,
 	}
-	lockZebedeeClientMockGetResourceBody.Lock()
+	mock.lockGetResourceBody.Lock()
 	mock.calls.GetResourceBody = append(mock.calls.GetResourceBody, callInfo)
-	lockZebedeeClientMockGetResourceBody.Unlock()
+	mock.lockGetResourceBody.Unlock()
 	return mock.GetResourceBodyFunc(ctx, userAccessToken, collectionID, lang, uri)
 }
 
 // GetResourceBodyCalls gets all the calls that were made to GetResourceBody.
 // Check the length with:
-//     len(mockedZebedeeClient.GetResourceBodyCalls())
+//
+//	len(mockedZebedeeClient.GetResourceBodyCalls())
 func (mock *ZebedeeClientMock) GetResourceBodyCalls() []struct {
 	Ctx             context.Context
 	UserAccessToken string
@@ -95,8 +93,8 @@ func (mock *ZebedeeClientMock) GetResourceBodyCalls() []struct {
 		Lang            string
 		URI             string
 	}
-	lockZebedeeClientMockGetResourceBody.RLock()
+	mock.lockGetResourceBody.RLock()
 	calls = mock.calls.GetResourceBody
-	lockZebedeeClientMockGetResourceBody.RUnlock()
+	mock.lockGetResourceBody.RUnlock()
 	return calls
 }

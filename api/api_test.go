@@ -10,8 +10,6 @@ import (
 	"net/http/httptest"
 	"strings"
 
-	"io/ioutil"
-
 	"github.com/ONSdigital/dp-file-downloader/api/testdata"
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	"github.com/gorilla/mux"
@@ -25,21 +23,21 @@ var responseHeaders = map[string]string{
 
 var ctx = context.Background()
 var hcMock = healthcheck.HealthCheck{}
+var responseBody = "Mock invocation"
+var queryParam = "my-query-param"
+var queryValue = "foo"
+var baseURL = "http://localhost:80/download/"
 
 func TestSuccessfulDownload(t *testing.T) {
 	t.Parallel()
 	Convey("Given an api with a mock implementation of Downloader", t, func() {
-
-		responseBody := "Mock invocation"
-		queryParam := "my-query-param"
 		mockDownloader := createMockDownloader("mock", []string{queryParam}, responseBody, http.StatusOK, nil)
 
 		api := routes(ctx, mux.NewRouter(), &hcMock, mockDownloader)
 
 		Convey("When a route is invoked ", func() {
-
-			url := "http://localhost:80/download/" + mockDownloader.Type() + "?" + queryParam + "=foo"
-			r, err := http.NewRequest("GET", url, nil)
+			url := baseURL + mockDownloader.Type() + "?" + queryParam + "=" + queryValue
+			r, err := http.NewRequest("GET", url, http.NoBody)
 			So(err, ShouldBeNil)
 
 			w := httptest.NewRecorder()
@@ -64,17 +62,13 @@ func TestSuccessfulDownload(t *testing.T) {
 func TestReturnsCorrectStatus(t *testing.T) {
 	t.Parallel()
 	Convey("Given an api with a mock implementation of Downloader", t, func() {
-
-		responseBody := "Mock invocation"
-		queryParam := "my-query-param"
 		mockDownloader := createMockDownloader("mock", []string{queryParam}, responseBody, http.StatusBadRequest, nil)
 
 		api := routes(ctx, mux.NewRouter(), &hcMock, mockDownloader)
 
 		Convey("When a route is invoked ", func() {
-
-			url := "http://localhost:80/download/" + mockDownloader.Type() + "?" + queryParam + "=foo"
-			r, err := http.NewRequest("GET", url, nil)
+			url := baseURL + mockDownloader.Type() + "?" + queryParam + "=" + queryValue
+			r, err := http.NewRequest("GET", url, http.NoBody)
 			So(err, ShouldBeNil)
 
 			w := httptest.NewRecorder()
@@ -94,15 +88,12 @@ func TestReturnsCorrectStatus(t *testing.T) {
 func TestNotFound(t *testing.T) {
 	t.Parallel()
 	Convey("Given an api with a mock implementation of Downloader", t, func() {
-
-		responseBody := "Mock invocation"
-		queryParam := "my-query-param"
 		mockDownloader := createMockDownloader("mock", []string{queryParam}, responseBody, http.StatusOK, nil)
 
 		api := routes(ctx, mux.NewRouter(), &hcMock, mockDownloader)
 
 		Convey("When a route is invoked with the wrong type", func() {
-			r, err := http.NewRequest("GET", "http://localhost/download/foo"+"?"+queryParam+"=foo", nil)
+			r, err := http.NewRequest("GET", "http://localhost/download/foo"+"?"+queryParam+"="+queryValue, http.NoBody)
 			So(err, ShouldBeNil)
 			r.Header.Add(queryParam, "foo")
 
@@ -119,18 +110,14 @@ func TestNotFound(t *testing.T) {
 func TestReturnsError(t *testing.T) {
 	t.Parallel()
 	Convey("Given an api with a mock implementation of Downloader that returns an error", t, func() {
-
-		responseBody := "Mock invocation"
-		queryParam := "my-query-param"
 		downloadError := errors.New("This is an error")
 		mockDownloader := createMockDownloader("mock", []string{queryParam}, responseBody, http.StatusOK, downloadError)
 
 		api := routes(ctx, mux.NewRouter(), &hcMock, mockDownloader)
 
 		Convey("When a route is invoked ", func() {
-
-			url := "http://localhost:80/download/" + mockDownloader.Type() + "?" + queryParam + "=foo"
-			r, err := http.NewRequest("GET", url, nil)
+			url := baseURL + mockDownloader.Type() + "?" + queryParam + "=" + queryValue
+			r, err := http.NewRequest("GET", url, http.NoBody)
 			So(err, ShouldBeNil)
 
 			w := httptest.NewRecorder()
@@ -138,7 +125,7 @@ func TestReturnsError(t *testing.T) {
 
 			Convey("The correct error response should be returned", func() {
 				So(w.Code, ShouldEqual, http.StatusInternalServerError)
-				So(strings.Trim(string(w.Body.String()), "\n"), ShouldEqual, downloadError.Error())
+				So(strings.Trim(w.Body.String(), "\n"), ShouldEqual, downloadError.Error())
 			})
 		})
 	})
@@ -147,18 +134,14 @@ func TestReturnsError(t *testing.T) {
 func TestReturnsBadRequest(t *testing.T) {
 	t.Parallel()
 	Convey("Given an api with a mock implementation of Downloader that returns an error with bad request", t, func() {
-
-		responseBody := "Mock invocation"
-		queryParam := "my-query-param"
 		downloadError := errors.New("That was a bad request")
 		mockDownloader := createMockDownloader("mock", []string{queryParam}, responseBody, http.StatusBadRequest, downloadError)
 
 		api := routes(ctx, mux.NewRouter(), &hcMock, mockDownloader)
 
 		Convey("When a route is invoked ", func() {
-
-			url := "http://localhost:80/download/" + mockDownloader.Type() + "?" + queryParam + "=foo"
-			r, err := http.NewRequest("GET", url, nil)
+			url := baseURL + mockDownloader.Type() + "?" + queryParam + "=" + queryValue
+			r, err := http.NewRequest("GET", url, http.NoBody)
 			So(err, ShouldBeNil)
 
 			w := httptest.NewRecorder()
@@ -166,7 +149,7 @@ func TestReturnsBadRequest(t *testing.T) {
 
 			Convey("The correct error response should be returned", func() {
 				So(w.Code, ShouldEqual, http.StatusBadRequest)
-				So(strings.Trim(string(w.Body.String()), "\n"), ShouldEqual, downloadError.Error())
+				So(strings.Trim(w.Body.String(), "\n"), ShouldEqual, downloadError.Error())
 			})
 		})
 	})
@@ -181,8 +164,7 @@ func createMockDownloader(path string, query []string, responseBody string, code
 			return path
 		},
 		DownloadFunc: func(r *http.Request) (io.ReadCloser, map[string]string, int, error) {
-			return ioutil.NopCloser(strings.NewReader(responseBody)), responseHeaders, code, err
+			return io.NopCloser(strings.NewReader(responseBody)), responseHeaders, code, err
 		},
 	}
-
 }

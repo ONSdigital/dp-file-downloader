@@ -60,5 +60,4 @@ func (cfg *Config) Log(ctx context.Context) {
 		"ContentServerHost":          cfg.ContentServerHost,
 		"APIRouterURL":               cfg.APIRouterURL,
 	})
-
 }

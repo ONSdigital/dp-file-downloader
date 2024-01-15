@@ -8,7 +8,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	healthcheck "github.com/ONSdigital/dp-api-clients-go/health"
+	healthcheckapi "github.com/ONSdigital/dp-api-clients-go/health"
 	"github.com/ONSdigital/dp-api-clients-go/zebedee"
 	"github.com/ONSdigital/dp-file-downloader/api"
 	tableRenderer "github.com/ONSdigital/dp-file-downloader/clients/table-renderer"
@@ -53,7 +53,7 @@ func main() {
 		log.Error(ctx, "failed to create service version information", err)
 	}
 
-	apiRouterCli := healthcheck.NewClient("api-router", cfg.APIRouterURL)
+	apiRouterCli := healthcheckapi.NewClient("api-router", cfg.APIRouterURL)
 
 	zc := zebedee.NewWithHealthClient(apiRouterCli)
 	tabrend := tableRenderer.New(cfg.TableRendererHost)
@@ -75,7 +75,7 @@ func main() {
 	// Gracefully shutdown the application closing any open resources.
 	gracefulShutdown := func() {
 		log.Info(ctx, fmt.Sprintf("Shutdown with timeout: %s", cfg.ShutdownTimeout))
-		ctx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
+		gracefulCtx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
 
 		var gracefulShutdown bool
 
@@ -83,11 +83,11 @@ func main() {
 			defer cancel()
 			var hasShutdownErrs bool
 
-			log.Info(ctx, "stop health checkers")
+			log.Info(gracefulCtx, "stop health checkers")
 			healthcheck.Stop()
 
-			if err = api.Close(ctx); err != nil {
-				log.Error(ctx, "error closing api", err)
+			if err = api.Close(gracefulCtx); err != nil {
+				log.Error(gracefulCtx, "error closing api", err)
 				hasShutdownErrs = true
 			}
 
@@ -97,34 +97,32 @@ func main() {
 		}()
 
 		// wait for timeout or success (via cancel)
-		<-ctx.Done()
-		if ctx.Err() == context.DeadlineExceeded {
-			log.Warn(ctx, "context deadline exceeded, enforcing shutdown", log.FormatErrors([]error{ctx.Err()}))
+		<-gracefulCtx.Done()
+		if gracefulCtx.Err() == context.DeadlineExceeded {
+			log.Warn(gracefulCtx, "context deadline exceeded, enforcing shutdown", log.FormatErrors([]error{gracefulCtx.Err()}))
 			os.Exit(1)
 		}
 
 		if !gracefulShutdown {
 			err = errors.New("failed to close dependencies; failed to shutdown gracefully")
-			log.Error(ctx, "failed to shutdown gracefully", err)
+			log.Error(gracefulCtx, "failed to shutdown gracefully", err)
 			os.Exit(1)
 		}
 
-		log.Info(ctx, "graceful shutdown complete", log.Data{"context": ctx.Err()})
+		log.Info(gracefulCtx, "graceful shutdown complete", log.Data{"context": gracefulCtx.Err()})
 	}
 
 	select {
 	case err := <-apiErrors:
 		log.Error(ctx, "api error received", err)
 		gracefulShutdown()
-	case signal := <-signals:
-		log.Info(ctx, "os signal received", log.Data{"signal": signal})
+	case sig := <-signals:
+		log.Info(ctx, "os signal received", log.Data{"signal": sig})
 		gracefulShutdown()
 	}
-
 }
 
-func registerCheckers(ctx context.Context, h *health.HealthCheck, r *tableRenderer.Client, apiRouterCli *healthcheck.Client) (err error) {
-
+func registerCheckers(ctx context.Context, h *health.HealthCheck, r *tableRenderer.Client, apiRouterCli *healthcheckapi.Client) (err error) {
 	hasErrors := false
 
 	if err = h.AddCheck("frontend renderer", r.Checker); err != nil {

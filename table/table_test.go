@@ -16,15 +16,17 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
-var requestURI = "/foo/bar.json"
-var requestFormat = "html"
-var expectedDisposition = "attachment; filename=\"bar.html\""
-var accessToken = "myAccessToken"
-var uriParam = "&uri="
-var expectedContentType = "text/html"
-var expectedContent = "renderServerResponse"
-var contentServerResponse = "contentServerResponse"
-var baseURL = "http://localhost/download/table?format="
+var (
+	requestURI            = "/foo/bar.json"
+	requestFormat         = "html"
+	expectedDisposition   = "attachment; filename=\"bar.html\""
+	accessToken           = "myAccessToken"
+	uriParam              = "&uri="
+	expectedContentType   = "text/html"
+	expectedContent       = "renderServerResponse"
+	contentServerResponse = "contentServerResponse"
+	baseURL               = "http://localhost/download/table?format="
+)
 
 func createZebedeeClientMock(body string, err error) *testdata.ZebedeeClientMock {
 	return &testdata.ZebedeeClientMock{

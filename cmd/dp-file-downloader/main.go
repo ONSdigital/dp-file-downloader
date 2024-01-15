@@ -8,7 +8,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	healthcheckapi "github.com/ONSdigital/dp-api-clients-go/health"
+	healthcheckclient "github.com/ONSdigital/dp-api-clients-go/health"
 	"github.com/ONSdigital/dp-api-clients-go/zebedee"
 	"github.com/ONSdigital/dp-file-downloader/api"
 	tableRenderer "github.com/ONSdigital/dp-file-downloader/clients/table-renderer"
@@ -53,7 +53,7 @@ func main() {
 		log.Error(ctx, "failed to create service version information", err)
 	}
 
-	apiRouterCli := healthcheckapi.NewClient("api-router", cfg.APIRouterURL)
+	apiRouterCli := healthcheckclient.NewClient("api-router", cfg.APIRouterURL)
 
 	zc := zebedee.NewWithHealthClient(apiRouterCli)
 	tabrend := tableRenderer.New(cfg.TableRendererHost)
@@ -122,7 +122,7 @@ func main() {
 	}
 }
 
-func registerCheckers(ctx context.Context, h *health.HealthCheck, r *tableRenderer.Client, apiRouterCli *healthcheckapi.Client) (err error) {
+func registerCheckers(ctx context.Context, h *health.HealthCheck, r *tableRenderer.Client, apiRouterCli *healthcheckclient.Client) (err error) {
 	hasErrors := false
 
 	if err = h.AddCheck("frontend renderer", r.Checker); err != nil {

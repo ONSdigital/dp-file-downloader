@@ -14,7 +14,7 @@ export GOOS=$(shell go env GOOS)
 export GOARCH=$(shell go env GOARCH)
 
 .PHONY: all
-all: audit test build lint
+all: audit test build lint test-component
 
 .PHONY: audit
 audit:
@@ -42,3 +42,7 @@ lint: ## Used in ci to run linters against Go code
 lint-local: ## Use locally to run linters against Go code
 	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.55.2
 	golangci-lint run ./...
+
+.PHONY: test-component
+test-component: ## Use to run component tests against Go code (replace exit command when component tests have been set up)
+	exit 0

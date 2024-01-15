@@ -1,5 +1,5 @@
 #!/bin/bash -eux
 
 pushd dp-file-downloader
-  make lint
+  make test-component
 popd

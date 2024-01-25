@@ -10,30 +10,26 @@ import (
 	"sync"
 )
 
-var (
-	lockTableRendererClientMockPostBody sync.RWMutex
-)
-
-// Ensure, that TableRendererClientMock does implement table.TableRendererClient.
+// Ensure, that RendererClientMock does implement table.RendererClient.
 // If this is not the case, regenerate this file with moq.
-var _ table.TableRendererClient = &TableRendererClientMock{}
+var _ table.RendererClient = &RendererClientMock{}
 
-// TableRendererClientMock is a mock implementation of table.TableRendererClient.
+// RendererClientMock is a mock implementation of table.RendererClient.
 //
-//     func TestSomethingThatUsesTableRendererClient(t *testing.T) {
+//	func TestSomethingThatUsesRendererClient(t *testing.T) {
 //
-//         // make and configure a mocked table.TableRendererClient
-//         mockedTableRendererClient := &TableRendererClientMock{
-//             PostBodyFunc: func(ctx context.Context, format string, body []byte) (*http.Response, error) {
-// 	               panic("mock out the PostBody method")
-//             },
-//         }
+//		// make and configure a mocked table.RendererClient
+//		mockedRendererClient := &RendererClientMock{
+//			PostBodyFunc: func(ctx context.Context, format string, body []byte) (*http.Response, error) {
+//				panic("mock out the PostBody method")
+//			},
+//		}
 //
-//         // use mockedTableRendererClient in code that requires table.TableRendererClient
-//         // and then make assertions.
+//		// use mockedRendererClient in code that requires table.RendererClient
+//		// and then make assertions.
 //
-//     }
-type TableRendererClientMock struct {
+//	}
+type RendererClientMock struct {
 	// PostBodyFunc mocks the PostBody method.
 	PostBodyFunc func(ctx context.Context, format string, body []byte) (*http.Response, error)
 
@@ -49,12 +45,13 @@ type TableRendererClientMock struct {
 			Body []byte
 		}
 	}
+	lockPostBody sync.RWMutex
 }
 
 // PostBody calls PostBodyFunc.
-func (mock *TableRendererClientMock) PostBody(ctx context.Context, format string, body []byte) (*http.Response, error) {
+func (mock *RendererClientMock) PostBody(ctx context.Context, format string, body []byte) (*http.Response, error) {
 	if mock.PostBodyFunc == nil {
-		panic("TableRendererClientMock.PostBodyFunc: method is nil but TableRendererClient.PostBody was just called")
+		panic("RendererClientMock.PostBodyFunc: method is nil but RendererClient.PostBody was just called")
 	}
 	callInfo := struct {
 		Ctx    context.Context
@@ -65,16 +62,17 @@ func (mock *TableRendererClientMock) PostBody(ctx context.Context, format string
 		Format: format,
 		Body:   body,
 	}
-	lockTableRendererClientMockPostBody.Lock()
+	mock.lockPostBody.Lock()
 	mock.calls.PostBody = append(mock.calls.PostBody, callInfo)
-	lockTableRendererClientMockPostBody.Unlock()
+	mock.lockPostBody.Unlock()
 	return mock.PostBodyFunc(ctx, format, body)
 }
 
 // PostBodyCalls gets all the calls that were made to PostBody.
 // Check the length with:
-//     len(mockedTableRendererClient.PostBodyCalls())
-func (mock *TableRendererClientMock) PostBodyCalls() []struct {
+//
+//	len(mockedRendererClient.PostBodyCalls())
+func (mock *RendererClientMock) PostBodyCalls() []struct {
 	Ctx    context.Context
 	Format string
 	Body   []byte
@@ -84,8 +82,8 @@ func (mock *TableRendererClientMock) PostBodyCalls() []struct {
 		Format string
 		Body   []byte
 	}
-	lockTableRendererClientMockPostBody.RLock()
+	mock.lockPostBody.RLock()
 	calls = mock.calls.PostBody
-	lockTableRendererClientMockPostBody.RUnlock()
+	mock.lockPostBody.RUnlock()
 	return calls
 }

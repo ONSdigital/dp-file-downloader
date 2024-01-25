@@ -1,0 +1,15 @@
+---
+
+platform: linux
+
+image_resource:
+  type: docker-image
+  source:
+    repository: golang
+    tag: 1.21.5-bullseye
+
+inputs:
+  - name: dp-file-downloader
+
+run:
+  path: dp-file-downloader/ci/scripts/component.sh

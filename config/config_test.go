@@ -12,7 +12,6 @@ func TestSpec(t *testing.T) {
 		cfg, err := Get()
 
 		Convey("When the config values are retrieved", func() {
-
 			Convey("There should be no error returned", func() {
 				So(err, ShouldBeNil)
 			})

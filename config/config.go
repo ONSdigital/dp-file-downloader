@@ -18,6 +18,7 @@ type Config struct {
 	OTBatchTimeout             time.Duration `encconfig:"OTEL_BATCH_TIMEOUT"`
 	OTServiceName              string        `envconfig:"OTEL_SERVICE_NAME"`
 	OTExporterOTLPEndpoint     string        `envconfig:"OTEL_EXPORTER_OTLP_ENDPOINT"`
+	OtelEnabled                bool          `envconfig:"OTEL_ENABLED"`
 	TableRendererHost          string        `envconfig:"TABLE_RENDERER_HOST"`
 	ContentServerHost          string        `envconfig:"CONTENT_SERVER_HOST"`
 	APIRouterURL               string        `envconfig:"API_ROUTER_URL"`
@@ -40,6 +41,7 @@ func Get() (*Config, error) {
 		OTBatchTimeout:             5 * time.Second,
 		OTExporterOTLPEndpoint:     "localhost:4317",
 		OTServiceName:              "dp-file-downloader",
+		OtelEnabled:                false,
 		TableRendererHost:          "http://localhost:23300",
 		ContentServerHost:          "http://localhost:8082",
 		APIRouterURL:               "http://localhost:23200/v1",

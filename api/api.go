@@ -44,34 +44,41 @@ type Downloader interface {
 // StartDownloaderAPI manages all the routes configured to the downloader
 func StartDownloaderAPI(ctx context.Context, cfg *config.Config, errorChan chan error, hc *healthcheck.HealthCheck, downloaders ...Downloader) *DownloaderAPI {
 	router := mux.NewRouter()
-	otelHandler := otelhttp.NewHandler(router, "/")
-	router.Use(otelmux.Middleware(cfg.OTServiceName))
+
+	if cfg.OtelEnabled {
+		otelHandler := otelhttp.NewHandler(router, "/")
+		router.Use(otelmux.Middleware(cfg.OTServiceName))
+		httpServer = dphttp.NewServer(cfg.BindAddr, otelHandler)
+	} else {
+		httpServer = dphttp.NewServer(cfg.BindAddr, router)
+	}
 
 	api := routes(ctx, router, hc, downloaders...)
 
-	httpServer = dphttp.NewServer(cfg.BindAddr, otelHandler)
 	// Disable this here to allow main to manage graceful shutdown of the entire app.
 	httpServer.HandleOSSignals = false
 
 	go func() {
 		log.Info(ctx, "starting file downloader...")
 
-		// Set up OpenTelemetry
-		otelConfig := dpotelgo.Config{
-			OtelBatchTimeout:         cfg.OTBatchTimeout,
-			OtelExporterOtlpEndpoint: cfg.OTExporterOTLPEndpoint,
-			OtelServiceName:          cfg.OTServiceName,
-		}
+		if cfg.OtelEnabled {
+			// Set up OpenTelemetry
+			otelConfig := dpotelgo.Config{
+				OtelBatchTimeout:         cfg.OTBatchTimeout,
+				OtelExporterOtlpEndpoint: cfg.OTExporterOTLPEndpoint,
+				OtelServiceName:          cfg.OTServiceName,
+			}
 
-		otelShutdown, oErr := dpotelgo.SetupOTelSDK(ctx, otelConfig)
-		if oErr != nil {
-			log.Fatal(ctx, "error setting up OpenTelemetry - hint: ensure OTEL_EXPORTER_OTLP_ENDPOINT is set", oErr)
+			otelShutdown, oErr := dpotelgo.SetupOTelSDK(ctx, otelConfig)
+			if oErr != nil {
+				log.Fatal(ctx, "error setting up OpenTelemetry - hint: ensure OTEL_EXPORTER_OTLP_ENDPOINT is set", oErr)
+			}
+			// Handle shutdown properly so nothing leaks.
+			defer func() {
+				oErr = errors.Join(oErr, otelShutdown(context.Background()))
+				errorChan <- oErr
+			}()
 		}
-		// Handle shutdown properly so nothing leaks.
-		defer func() {
-			oErr = errors.Join(oErr, otelShutdown(context.Background()))
-			errorChan <- oErr
-		}()
 
 		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Error(ctx, "error occurred when running ListenAndServe", err)

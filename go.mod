@@ -2,12 +2,15 @@ module github.com/ONSdigital/dp-file-downloader
 
 go 1.21
 
+replace google.golang.org/protobuf => google.golang.org/protobuf v1.33.0
+
+replace golang.org/x/crypto => golang.org/x/crypto v0.17.0
+
 require (
 	github.com/ONSdigital/dp-api-clients-go v1.43.0
 	github.com/ONSdigital/dp-healthcheck v1.6.2
 	github.com/ONSdigital/dp-net v1.5.0
 	github.com/ONSdigital/log.go/v2 v2.4.3
-	github.com/gorilla/handlers v1.5.2
 	github.com/gorilla/mux v1.8.1
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/smartystreets/goconvey v1.8.1
@@ -32,8 +35,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.21.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.0.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/crypto v0.17.0 // indirect
-	golang.org/x/text v0.14.0 // indirect
+	golang.org/x/text v0.16.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20231212172506-995d672761c0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20231212172506-995d672761c0 // indirect
 	google.golang.org/grpc v1.60.1 // indirect
@@ -58,6 +60,6 @@ require (
 	go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux v0.46.1
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1
 	go.opentelemetry.io/otel v1.21.0 // indirect
-	golang.org/x/net v0.19.0 // indirect
-	golang.org/x/sys v0.15.0 // indirect
+	golang.org/x/net v0.25.0 // indirect
+	golang.org/x/sys v0.21.0 // indirect
 )

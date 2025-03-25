@@ -10,7 +10,7 @@ import (
 	"errors"
 	"io"
 
-	"github.com/ONSdigital/dp-api-clients-go/zebedee"
+	"github.com/ONSdigital/dp-api-clients-go/v2/zebedee"
 	"github.com/ONSdigital/dp-file-downloader/table"
 	"github.com/ONSdigital/dp-file-downloader/table/testdata"
 	. "github.com/smartystreets/goconvey/convey"
@@ -30,7 +30,7 @@ var (
 
 func createZebedeeClientMock(body string, err error) *testdata.ZebedeeClientMock {
 	return &testdata.ZebedeeClientMock{
-		GetResourceBodyFunc: func(ctx context.Context, userAccessToken string, collectionID string, lang string, uri string) ([]byte, error) {
+		GetResourceBodyFunc: func(_ context.Context, _ string, _ string, _ string, _ string) ([]byte, error) {
 			return []byte(body), err
 		},
 	}
@@ -40,7 +40,7 @@ func createTableRenderClientMock(status int, testBody, contentType string, err e
 	header := http.Header{}
 	header.Add("Content-Type", contentType)
 	return &testdata.RendererClientMock{
-		PostBodyFunc: func(ctx context.Context, format string, body []byte) (*http.Response, error) {
+		PostBodyFunc: func(_ context.Context, _ string, _ []byte) (*http.Response, error) {
 			return &http.Response{StatusCode: status, Body: io.NopCloser(strings.NewReader(testBody)), Header: header}, err
 		},
 	}

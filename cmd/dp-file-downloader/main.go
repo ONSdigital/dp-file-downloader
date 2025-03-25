@@ -8,8 +8,8 @@ import (
 	"os/signal"
 	"syscall"
 
-	healthcheckclient "github.com/ONSdigital/dp-api-clients-go/health"
-	"github.com/ONSdigital/dp-api-clients-go/zebedee"
+	healthcheckclient "github.com/ONSdigital/dp-api-clients-go/v2/health"
+	"github.com/ONSdigital/dp-api-clients-go/v2/zebedee"
 	"github.com/ONSdigital/dp-file-downloader/api"
 	tableRenderer "github.com/ONSdigital/dp-file-downloader/clients/table-renderer"
 	"github.com/ONSdigital/dp-file-downloader/config"

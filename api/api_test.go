@@ -163,7 +163,7 @@ func createMockDownloader(path string, query []string, responseBody string, code
 		TypeFunc: func() string {
 			return path
 		},
-		DownloadFunc: func(_ *http.Request) (io.ReadCloser, map[string]string, int, error) {
+		DownloadFunc: func(r *http.Request) (io.ReadCloser, map[string]string, int, error) {
 			return io.NopCloser(strings.NewReader(responseBody)), responseHeaders, code, err
 		},
 	}

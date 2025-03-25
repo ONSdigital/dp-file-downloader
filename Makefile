@@ -40,7 +40,6 @@ lint: ## Used in ci to run linters against Go code
 
 .PHONY: lint-local
 lint-local: ## Use locally to run linters against Go code
-	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.5
 	golangci-lint run ./...
 
 .PHONY: test-component

@@ -30,7 +30,7 @@ var (
 
 func createZebedeeClientMock(body string, err error) *testdata.ZebedeeClientMock {
 	return &testdata.ZebedeeClientMock{
-		GetResourceBodyFunc: func(_ context.Context, _ string, _ string, _ string, _ string) ([]byte, error) {
+		GetResourceBodyFunc: func(ctx context.Context, userAccessToken string, collectionID string, lang string, uri string) ([]byte, error) {
 			return []byte(body), err
 		},
 	}
@@ -40,7 +40,7 @@ func createTableRenderClientMock(status int, testBody, contentType string, err e
 	header := http.Header{}
 	header.Add("Content-Type", contentType)
 	return &testdata.RendererClientMock{
-		PostBodyFunc: func(_ context.Context, _ string, _ []byte) (*http.Response, error) {
+		PostBodyFunc: func(ctx context.Context, format string, body []byte) (*http.Response, error) {
 			return &http.Response{StatusCode: status, Body: io.NopCloser(strings.NewReader(testBody)), Header: header}, err
 		},
 	}

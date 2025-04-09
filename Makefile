@@ -14,7 +14,7 @@ export GOOS=$(shell go env GOOS)
 export GOARCH=$(shell go env GOARCH)
 
 .PHONY: all
-all: audit test build lint test-component
+all: audit lint test build lint test-component
 
 .PHONY: audit
 audit:

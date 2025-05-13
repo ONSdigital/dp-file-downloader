@@ -21,7 +21,6 @@ func TestSpec(t *testing.T) {
 				So(cfg.ShutdownTimeout, ShouldEqual, 5*time.Second)
 				So(cfg.CORSAllowedOrigins, ShouldEqual, "*")
 				So(cfg.TableRendererHost, ShouldEqual, "http://localhost:23300")
-				So(cfg.ContentServerHost, ShouldEqual, "http://localhost:8082")
 				So(cfg.APIRouterURL, ShouldEqual, "http://localhost:23200/v1")
 				So(cfg.HealthCheckCriticalTimeout, ShouldEqual, 90*time.Second)
 				So(cfg.HealthCheckInterval, ShouldEqual, 30*time.Second)

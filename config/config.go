@@ -43,7 +43,6 @@ func Get() (*Config, error) {
 		OTServiceName:              "dp-file-downloader",
 		OtelEnabled:                false,
 		TableRendererHost:          "http://localhost:23300",
-		ContentServerHost:          "http://localhost:8082",
 		APIRouterURL:               "http://localhost:23200/v1",
 	}
 

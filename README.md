@@ -23,7 +23,6 @@ make debug
 | OTEL_EXPORTER_OTLP_ENDPOINT   | http://localhost:4317  | URL for OpenTelemetry endpoint                                                                  |
 | OTEL_SERVICE_NAME             | "dp-file-downloader"   | Service name to report to telemetry tools                                                       |
 | TABLE_RENDERER_HOST           | http://localhost:23300 | The hostname and port of the table renderer                                                     |
-| CONTENT_SERVER_HOST           | http://localhost:8082  | The hostname and port of the content service                                                    |
 
 ### Endpoints
 

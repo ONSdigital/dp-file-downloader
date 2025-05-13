@@ -1,19 +1,18 @@
-dp-file-downloader
-================
+# dp-file-downloader
 
 Accepts GET requests to download a file (currently limited to tables in html, xlsx or csv format),
 retrieves the definition of the file from the content server (Zebedee),
 makes a POST request to the renderer service and returns the response to the user.
 
-### Getting started
+## Getting started
 
-```
+```sh
 make debug
 ```
 
-
-| Environment variable          |   Default              | Description
-| ----------------------------- | -----------------------| -----------
+| Environment variable          |   Default              | Description |
+| ----------------------------- | -----------------------| ----------- |
+| API_ROUTER_URL | http://localhost:23200/v1 | URL for API Router (for connections to zebedee) |
 | BIND_ADDR                     | :23400                 | The host and port to bind to                                                                    |
 | CORS_ALLOWED_ORIGINS          | *                      | The allowed origins for CORS requests                                                           |
 | SHUTDOWN_TIMEOUT              | 5s                     | The graceful shutdown timeout ([`time.Duration`](https://golang.org/pkg/time/#Duration) format) |
@@ -30,12 +29,11 @@ make debug
 | ---                                       | ------ | -----------                                          |
 | /download/table?format={format}&uri={uri} | GET    | Retrieves (generates) and returns the requested file |
 
-
-### Contributing
+## Contributing
 
 See [CONTRIBUTING](CONTRIBUTING.md) for details.
 
-### License
+## License
 
 Copyright © 2016-2020, Office for National Statistics (https://www.ons.gov.uk)
 

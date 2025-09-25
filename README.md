@@ -10,23 +10,37 @@ makes a POST request to the renderer service and returns the response to the use
 make debug
 ```
 
-| Environment variable          |   Default              | Description |
-| ----------------------------- | -----------------------| ----------- |
-| API_ROUTER_URL | http://localhost:23200/v1 | URL for API Router (for connections to zebedee) |
-| BIND_ADDR                     | :23400                 | The host and port to bind to                                                                    |
-| CORS_ALLOWED_ORIGINS          | *                      | The allowed origins for CORS requests                                                           |
-| SHUTDOWN_TIMEOUT              | 5s                     | The graceful shutdown timeout ([`time.Duration`](https://golang.org/pkg/time/#Duration) format) |
-| HEALTHCHECK_INTERVAL          | 30 seconds             | Interval between health checks                                                                  |
-| HEALTHCHECK_CRITICAL_TIMEOUT  | 90 seconds             | Amount of time to pass since last healthy health check to be deemed a critical failure          |
-| OTEL_BATCH_TIMEOUT            | 5s                     | Interval between pushes to OT Collector                                                         |
-| OTEL_EXPORTER_OTLP_ENDPOINT   | http://localhost:4317  | URL for OpenTelemetry endpoint                                                                  |
-| OTEL_SERVICE_NAME             | "dp-file-downloader"   | Service name to report to telemetry tools                                                       |
-| TABLE_RENDERER_HOST           | http://localhost:23300 | The hostname and port of the table renderer                                                     |
+## Tools
+
+To run some of our tests you will need additional tooling:
+
+### Audit
+
+We use `dis-vulncheck` to do auditing, which you will [need to install](https://github.com/ONSdigital/dis-vulncheck).
+
+### Linting
+
+We use v2 of golangci-lint, which you will [need to install](https://golangci-lint.run/docs/welcome/install).
+
+## Configuration
+
+| Environment variable         | Default                     | Description                                                                                     |
+|------------------------------|-----------------------------|-------------------------------------------------------------------------------------------------|
+| API_ROUTER_URL               | <http://localhost:23200/v1> | URL for API Router (for connections to zebedee)                                                 |
+| BIND_ADDR                    | :23400                      | The host and port to bind to                                                                    |
+| CORS_ALLOWED_ORIGINS         | *                           | The allowed origins for CORS requests                                                           |
+| SHUTDOWN_TIMEOUT             | 5s                          | The graceful shutdown timeout ([`time.Duration`](https://golang.org/pkg/time/#Duration) format) |
+| HEALTHCHECK_INTERVAL         | 30 seconds                  | Interval between health checks                                                                  |
+| HEALTHCHECK_CRITICAL_TIMEOUT | 90 seconds                  | Amount of time to pass since last healthy health check to be deemed a critical failure          |
+| OTEL_BATCH_TIMEOUT           | 5s                          | Interval between pushes to OT Collector                                                         |
+| OTEL_EXPORTER_OTLP_ENDPOINT  | <http://localhost:4317>     | URL for OpenTelemetry endpoint                                                                  |
+| OTEL_SERVICE_NAME            | "dp-file-downloader"        | Service name to report to telemetry tools                                                       |
+| TABLE_RENDERER_HOST          | <http://localhost:23300>    | The hostname and port of the table renderer                                                     |
 
 ### Endpoints
 
 | url                                       | Method | Description                                          |
-| ---                                       | ------ | -----------                                          |
+|-------------------------------------------|--------|------------------------------------------------------|
 | /download/table?format={format}&uri={uri} | GET    | Retrieves (generates) and returns the requested file |
 
 ## Contributing
@@ -35,6 +49,6 @@ See [CONTRIBUTING](CONTRIBUTING.md) for details.
 
 ## License
 
-Copyright © 2016-2020, Office for National Statistics (https://www.ons.gov.uk)
+Copyright © 2016-2020, Office for National Statistics (<https://www.ons.gov.uk>)
 
 Released under MIT license, see [LICENSE](LICENSE.md) for details.

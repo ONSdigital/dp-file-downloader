@@ -18,7 +18,7 @@ all: audit lint test build lint test-component
 
 .PHONY: audit
 audit:
-	go list -m all | nancy sleuth
+	dis-vulncheck
 
 .PHONY: build
 build:

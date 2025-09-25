@@ -64,9 +64,10 @@ func (downloader *Downloader) Download(r *http.Request) (responseBody io.ReadClo
 		log.Error(ctx, "error calling content server", err)
 		var e zebedee.ErrInvalidZebedeeResponse
 		if errors.As(err, &e) {
-			if e.ActualCode == http.StatusNotFound {
+			switch e.ActualCode {
+			case http.StatusNotFound:
 				return nil, nil, http.StatusNotFound, err
-			} else if e.ActualCode == http.StatusInternalServerError {
+			case http.StatusInternalServerError:
 				return nil, nil, http.StatusInternalServerError, err
 			}
 			return nil, nil, http.StatusBadRequest, err

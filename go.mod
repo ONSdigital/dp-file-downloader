@@ -3,7 +3,7 @@ module github.com/ONSdigital/dp-file-downloader
 go 1.26.0
 
 require (
-	github.com/ONSdigital/dp-api-clients-go/v2 v2.277.0
+	github.com/ONSdigital/dp-api-clients-go/v2 v2.273.0
 	github.com/ONSdigital/dp-healthcheck v1.6.4
 	github.com/ONSdigital/dp-net/v3 v3.10.0
 	github.com/ONSdigital/log.go/v2 v2.5.2

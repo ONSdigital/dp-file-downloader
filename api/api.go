@@ -127,7 +127,7 @@ func handleDownload(handler func(r *http.Request) (io.ReadCloser, map[string]str
 				}
 			}
 		}()
-		requestLabel := "request:"
+		const requestLabel = "request"
 		if err != nil {
 			log.Error(ctx, "handleDownload: Error returned from handler", err, log.Data{requestLabel: request})
 			if status < 400 {

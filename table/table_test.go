@@ -28,6 +28,11 @@ var (
 	baseURL               = "http://localhost/download/table?format="
 )
 
+const (
+	accessTokenLabel = "access_token"
+	testUrl          = "test/url"
+)
+
 func createZebedeeClientMock(body string, err error) *testdata.ZebedeeClientMock {
 	return &testdata.ZebedeeClientMock{
 		GetResourceBodyFunc: func(ctx context.Context, userAccessToken string, collectionID string, lang string, uri string) ([]byte, error) {
@@ -50,7 +55,7 @@ func TestSuccessfulDownload(t *testing.T) {
 	t.Parallel()
 	Convey("Given a TableDownloader and a request to download a table", t, func() {
 		initialRequest, err := http.NewRequest("GET", baseURL+requestFormat+uriParam+requestURI, http.NoBody)
-		initialRequest.AddCookie(&http.Cookie{Name: "access_token", Value: accessToken})
+		initialRequest.AddCookie(&http.Cookie{Name: accessTokenLabel, Value: accessToken})
 		So(err, ShouldBeNil)
 
 		contentClient := createZebedeeClientMock(contentServerResponse, nil)
@@ -86,7 +91,7 @@ func TestSuccessfulDownloadForSpecificCollection(t *testing.T) {
 		contentCollection := "myCollection"
 
 		initialRequest, err := http.NewRequest("GET", baseURL+requestFormat+uriParam+requestURI, http.NoBody)
-		initialRequest.AddCookie(&http.Cookie{Name: "access_token", Value: accessToken})
+		initialRequest.AddCookie(&http.Cookie{Name: accessTokenLabel, Value: accessToken})
 		initialRequest.AddCookie(&http.Cookie{Name: "collection", Value: contentCollection})
 		So(err, ShouldBeNil)
 
@@ -123,10 +128,10 @@ func TestMissingContent(t *testing.T) {
 		requestURI := "/foo/bar"
 
 		initialRequest, err := http.NewRequest("GET", baseURL+requestFormat+uriParam+requestURI, http.NoBody)
-		initialRequest.AddCookie(&http.Cookie{Name: "access_token", Value: accessToken})
+		initialRequest.AddCookie(&http.Cookie{Name: accessTokenLabel, Value: accessToken})
 		So(err, ShouldBeNil)
 
-		contentClient := createZebedeeClientMock("", zebedee.ErrInvalidZebedeeResponse{ActualCode: http.StatusNotFound, URI: "test/url"})
+		contentClient := createZebedeeClientMock("", zebedee.ErrInvalidZebedeeResponse{ActualCode: http.StatusNotFound, URI: testUrl})
 		renderClient := createTableRenderClientMock(http.StatusOK, "", "", nil)
 
 		testObj := table.NewDownloader(contentClient, renderClient)
@@ -149,9 +154,9 @@ func TestContentServerError(t *testing.T) {
 		initialRequest, err := http.NewRequest("GET", "http://localhost/download/table?format=html&uri=/foo/bar", http.NoBody)
 		So(err, ShouldBeNil)
 
-		expectedErr := zebedee.ErrInvalidZebedeeResponse{ActualCode: http.StatusInternalServerError, URI: "test/url"}
+		expectedErr := zebedee.ErrInvalidZebedeeResponse{ActualCode: http.StatusInternalServerError, URI: testUrl}
 
-		contentClient := createZebedeeClientMock("", zebedee.ErrInvalidZebedeeResponse{ActualCode: http.StatusInternalServerError, URI: "test/url"})
+		contentClient := createZebedeeClientMock("", zebedee.ErrInvalidZebedeeResponse{ActualCode: http.StatusInternalServerError, URI: testUrl})
 		renderClient := createTableRenderClientMock(http.StatusOK, "", "", nil)
 
 		testObj := table.NewDownloader(contentClient, renderClient)
@@ -198,10 +203,10 @@ func TestBadlyFormedRequest(t *testing.T) {
 		requestFormat := "html"
 
 		initialRequest, err := http.NewRequest("GET", "http://localhost/download/table?format="+requestFormat+uriParam+requestURI, http.NoBody)
-		initialRequest.AddCookie(&http.Cookie{Name: "access_token", Value: accessToken})
+		initialRequest.AddCookie(&http.Cookie{Name: accessTokenLabel, Value: accessToken})
 		So(err, ShouldBeNil)
 
-		contentClient := createZebedeeClientMock("", zebedee.ErrInvalidZebedeeResponse{ActualCode: http.StatusBadRequest, URI: "test/url"})
+		contentClient := createZebedeeClientMock("", zebedee.ErrInvalidZebedeeResponse{ActualCode: http.StatusBadRequest, URI: testUrl})
 		renderClient := createTableRenderClientMock(http.StatusOK, "", "", nil)
 
 		testObj := table.NewDownloader(contentClient, renderClient)

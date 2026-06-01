@@ -127,8 +127,9 @@ func handleDownload(handler func(r *http.Request) (io.ReadCloser, map[string]str
 				}
 			}
 		}()
+		requestLabel := "request:"
 		if err != nil {
-			log.Error(ctx, "handleDownload: Error returned from handler", err, log.Data{"request:": request})
+			log.Error(ctx, "handleDownload: Error returned from handler", err, log.Data{requestLabel: request})
 			if status < 400 {
 				status = http.StatusInternalServerError
 			}
@@ -141,7 +142,7 @@ func handleDownload(handler func(r *http.Request) (io.ReadCloser, map[string]str
 			// write body
 			_, err := io.Copy(w, reader)
 			if err != nil {
-				log.Error(ctx, "handleDownload: Error while copying from reader", err, log.Data{"request:": request})
+				log.Error(ctx, "handleDownload: Error while copying from reader", err, log.Data{requestLabel: request})
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}

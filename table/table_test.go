@@ -92,7 +92,7 @@ func TestSuccessfulDownloadUsesFigureTitleAsFilename(t *testing.T) {
 		figureJSON := `{"title":"my-table-title","filename":"ignored","version":"1","uri":"/foo/bar.json"}`
 
 		initialRequest, err := http.NewRequest("GET", baseURL+requestFormat+uriParam+requestURI, http.NoBody)
-		initialRequest.AddCookie(&http.Cookie{Name: "access_token", Value: accessToken})
+		initialRequest.AddCookie(&http.Cookie{Name: accessTokenLabel, Value: accessToken})
 		So(err, ShouldBeNil)
 
 		contentClient := createZebedeeClientMock(figureJSON, nil)
@@ -120,7 +120,7 @@ func TestSuccessfulDownloadFallsBackToURIFilenameWhenFigureTitleEmpty(t *testing
 		figureJSON := `{"title":"","filename":"ignored","version":"1","uri":"/foo/bar.json"}`
 
 		initialRequest, err := http.NewRequest("GET", baseURL+requestFormat+uriParam+requestURI, http.NoBody)
-		initialRequest.AddCookie(&http.Cookie{Name: "access_token", Value: accessToken})
+		initialRequest.AddCookie(&http.Cookie{Name: accessTokenLabel, Value: accessToken})
 		So(err, ShouldBeNil)
 
 		contentClient := createZebedeeClientMock(figureJSON, nil)
@@ -148,7 +148,7 @@ func TestSuccessfulDownloadFallsBackToURIFilenameWhenFigureUnmarshalFails(t *tes
 		invalidFigureJSON := "not-valid-json"
 
 		initialRequest, err := http.NewRequest("GET", baseURL+requestFormat+uriParam+requestURI, http.NoBody)
-		initialRequest.AddCookie(&http.Cookie{Name: "access_token", Value: accessToken})
+		initialRequest.AddCookie(&http.Cookie{Name: accessTokenLabel, Value: accessToken})
 		So(err, ShouldBeNil)
 
 		contentClient := createZebedeeClientMock(invalidFigureJSON, nil)

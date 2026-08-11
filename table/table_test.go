@@ -20,6 +20,7 @@ var (
 	requestURI            = "/foo/bar.json"
 	requestFormat         = "html"
 	expectedDisposition   = "attachment; filename=\"bar.html\""
+	expectedTitleFilename = "attachment; filename=\"my-table-title.html\""
 	accessToken           = "myAccessToken"
 	uriParam              = "&uri="
 	expectedContentType   = "text/html"
@@ -75,6 +76,90 @@ func TestSuccessfulDownload(t *testing.T) {
 			})
 
 			Convey("The correct response should be returned", func() {
+				So(responseErr, ShouldBeNil)
+				So(responseStatus, ShouldEqual, http.StatusOK)
+				So(responseHeaders["Content-Type"], ShouldEqual, expectedContentType)
+				So(responseHeaders["Content-Disposition"], ShouldEqual, expectedDisposition)
+				So(readString(responseBody, t), ShouldEqual, expectedContent)
+			})
+		})
+	})
+}
+
+func TestSuccessfulDownloadUsesFigureTitleAsFilename(t *testing.T) {
+	t.Parallel()
+	Convey("Given a TableDownloader and a request to download a table with a title in the figure JSON", t, func() {
+		figureJSON := `{"title":"my-table-title","filename":"ignored","version":"1","uri":"/foo/bar.json"}`
+
+		initialRequest, err := http.NewRequest("GET", baseURL+requestFormat+uriParam+requestURI, http.NoBody)
+		initialRequest.AddCookie(&http.Cookie{Name: "access_token", Value: accessToken})
+		So(err, ShouldBeNil)
+
+		contentClient := createZebedeeClientMock(figureJSON, nil)
+		renderClient := createTableRenderClientMock(http.StatusOK, expectedContent, expectedContentType, nil)
+
+		testObj := table.NewDownloader(contentClient, renderClient)
+
+		Convey("When Download is invoked", func() {
+			responseBody, responseHeaders, responseStatus, responseErr := testObj.Download(initialRequest)
+
+			Convey("The filename in response headers should use the figure title", func() {
+				So(responseErr, ShouldBeNil)
+				So(responseStatus, ShouldEqual, http.StatusOK)
+				So(responseHeaders["Content-Type"], ShouldEqual, expectedContentType)
+				So(responseHeaders["Content-Disposition"], ShouldEqual, expectedTitleFilename)
+				So(readString(responseBody, t), ShouldEqual, expectedContent)
+			})
+		})
+	})
+}
+
+func TestSuccessfulDownloadFallsBackToURIFilenameWhenFigureTitleEmpty(t *testing.T) {
+	t.Parallel()
+	Convey("Given a TableDownloader and a request to download a table with no title in the figure JSON", t, func() {
+		figureJSON := `{"title":"","filename":"ignored","version":"1","uri":"/foo/bar.json"}`
+
+		initialRequest, err := http.NewRequest("GET", baseURL+requestFormat+uriParam+requestURI, http.NoBody)
+		initialRequest.AddCookie(&http.Cookie{Name: "access_token", Value: accessToken})
+		So(err, ShouldBeNil)
+
+		contentClient := createZebedeeClientMock(figureJSON, nil)
+		renderClient := createTableRenderClientMock(http.StatusOK, expectedContent, expectedContentType, nil)
+
+		testObj := table.NewDownloader(contentClient, renderClient)
+
+		Convey("When Download is invoked", func() {
+			responseBody, responseHeaders, responseStatus, responseErr := testObj.Download(initialRequest)
+
+			Convey("The filename in response headers should use the URI path", func() {
+				So(responseErr, ShouldBeNil)
+				So(responseStatus, ShouldEqual, http.StatusOK)
+				So(responseHeaders["Content-Type"], ShouldEqual, expectedContentType)
+				So(responseHeaders["Content-Disposition"], ShouldEqual, expectedDisposition)
+				So(readString(responseBody, t), ShouldEqual, expectedContent)
+			})
+		})
+	})
+}
+
+func TestSuccessfulDownloadFallsBackToURIFilenameWhenFigureUnmarshalFails(t *testing.T) {
+	t.Parallel()
+	Convey("Given a TableDownloader and a request to download a table with invalid figure JSON", t, func() {
+		invalidFigureJSON := "not-valid-json"
+
+		initialRequest, err := http.NewRequest("GET", baseURL+requestFormat+uriParam+requestURI, http.NoBody)
+		initialRequest.AddCookie(&http.Cookie{Name: "access_token", Value: accessToken})
+		So(err, ShouldBeNil)
+
+		contentClient := createZebedeeClientMock(invalidFigureJSON, nil)
+		renderClient := createTableRenderClientMock(http.StatusOK, expectedContent, expectedContentType, nil)
+
+		testObj := table.NewDownloader(contentClient, renderClient)
+
+		Convey("When Download is invoked", func() {
+			responseBody, responseHeaders, responseStatus, responseErr := testObj.Download(initialRequest)
+
+			Convey("The response should still succeed and use the default URI filename", func() {
 				So(responseErr, ShouldBeNil)
 				So(responseStatus, ShouldEqual, http.StatusOK)
 				So(responseHeaders["Content-Type"], ShouldEqual, expectedContentType)

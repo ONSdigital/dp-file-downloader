@@ -2,6 +2,7 @@ package table
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
@@ -75,6 +76,14 @@ func (downloader *Downloader) Download(r *http.Request) (responseBody io.ReadClo
 		return nil, nil, http.StatusInternalServerError, err
 	}
 
+	var tableData zebedee.Figure
+
+	if err := json.Unmarshal(contentResponseBody, &tableData); err != nil {
+		log.Error(ctx, "error unmarshalling response body into figure", err)
+		// This is progressive enhancement to add an appropriate title to the filename.
+		// If the unmarshal fails, we will just use the default filename.
+	}
+
 	// post the json definition to the renderer
 	renderResponse, err := downloader.rendererClient.PostBody(ctx, format, contentResponseBody)
 	if err != nil {
@@ -82,7 +91,7 @@ func (downloader *Downloader) Download(r *http.Request) (responseBody io.ReadClo
 		return nil, nil, http.StatusInternalServerError, err
 	}
 
-	return renderResponse.Body, createHeaders(renderResponse, uri, format), renderResponse.StatusCode, nil
+	return renderResponse.Body, createHeaders(renderResponse, uri, format, tableData), renderResponse.StatusCode, nil
 }
 
 // createContentRequest creates the request to send to the content server, extracting headers and cookies form the source request as appropriate
@@ -105,11 +114,9 @@ func getContentType(response *http.Response) map[string]string {
 }
 
 // createHeaders extracts the content type form the response and constructs a filename from the last path element of the uri and the format
-func createHeaders(response *http.Response, uri, format string) map[string]string {
+func createHeaders(response *http.Response, uri, format string, tableData zebedee.Figure) map[string]string {
 	headers := getContentType(response)
-	paths := strings.Split(uri, "/")
-	filename := strings.TrimSuffix(paths[len(paths)-1], ".json") + "." + format
-	headers["Content-Disposition"] = "attachment; filename=\"" + filename + "\""
+	headers["Content-Disposition"] = "attachment; filename=\"" + createFilename(uri, format, tableData) + "\""
 	return headers
 }
 
@@ -118,4 +125,17 @@ func validateURL(format, uri string) (err error) {
 		return errors.New("bad request")
 	}
 	return nil
+}
+
+func createFilename(uri, format string, tableData zebedee.Figure) string {
+	if tableData.Title != "" {
+		return tableData.Title + "." + format
+	}
+	return createDefaultFilenameFromPath(uri, format)
+}
+
+func createDefaultFilenameFromPath(uri, format string) string {
+	paths := strings.Split(uri, "/")
+	filename := strings.TrimSuffix(paths[len(paths)-1], ".json") + "." + format
+	return filename
 }

@@ -20,7 +20,6 @@ type Config struct {
 	OTExporterOTLPEndpoint     string        `envconfig:"OTEL_EXPORTER_OTLP_ENDPOINT"`
 	OtelEnabled                bool          `envconfig:"OTEL_ENABLED"`
 	TableRendererHost          string        `envconfig:"TABLE_RENDERER_HOST"`
-	ContentServerHost          string        `envconfig:"CONTENT_SERVER_HOST"`
 	APIRouterURL               string        `envconfig:"API_ROUTER_URL"`
 }
 
@@ -58,7 +57,6 @@ func (cfg *Config) Log(ctx context.Context) {
 		"HealthCheckCriticalTimeout": cfg.HealthCheckCriticalTimeout,
 		"HealthCheckInterval":        cfg.HealthCheckInterval,
 		"TableRendererHost":          cfg.TableRendererHost,
-		"ContentServerHost":          cfg.ContentServerHost,
 		"APIRouterURL":               cfg.APIRouterURL,
 	})
 }
